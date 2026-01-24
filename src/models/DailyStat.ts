@@ -9,6 +9,12 @@ const DailyStatSchema = new mongoose.Schema({
   hard: { type: Number, default: 0 },
   total: { type: Number, default: 0 },
   ranking: { type: Number, default: 0 },
+  // Profile data
+  avatar: { type: String, default: '' },
+  country: { type: String, default: '' },
+  streak: { type: Number, default: 0 },
+  lastSubmission: { type: String, default: null }, // timestamp
+  recentProblems: [{ type: String }], // Array of problem titles
   // Point system
   previousTotal: { type: Number, default: 0 }, // Total from previous check
   todayPoints: { type: Number, default: 0 }, // Points earned today (1 per new problem)
