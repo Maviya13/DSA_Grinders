@@ -15,6 +15,10 @@ interface LeaderboardEntry {
     todayPoints: number;
     totalScore: number;
     totalProblems: number;
+    easy?: number;
+    medium?: number;
+    hard?: number;
+    ranking?: number;
     avatar?: string;
     country?: string;
     streak?: number;
@@ -263,7 +267,7 @@ export default function HomePage() {
                                             )}
                                         </div>
                                         
-                                        <div className="flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0 relative group/profile">
                                             <div className="flex items-center gap-2">
                                                 <a 
                                                     href={`https://leetcode.com/${entry.leetcodeUsername}`}
@@ -286,6 +290,80 @@ export default function HomePage() {
                                                     <span className="text-xs text-gray-400">• {getTimeAgo(entry.lastSubmission)}</span>
                                                 )}
                                             </div>
+                                            
+                                            {/* Profile Hover Card */}
+                                            <div className="absolute left-0 top-full mt-2 opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-150 z-50 pointer-events-none">
+                                                <div className="bg-white rounded-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] border border-gray-100 w-64">
+                                                    <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+                                                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                                            {entry.avatar ? (
+                                                                <img src={entry.avatar} alt={entry.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-gray-500 text-lg font-semibold">
+                                                                    {entry.name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-medium text-gray-900 truncate text-sm">{entry.name}</div>
+                                                            <div className="text-xs text-gray-500 truncate">@{entry.leetcodeUsername}</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-2.5 text-xs">
+                                                        {entry.ranking && entry.ranking > 0 && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-gray-500">Global Rank</span>
+                                                                <span className="text-gray-900 font-medium">#{entry.ranking.toLocaleString()}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-500">Total Solved</span>
+                                                            <span className="text-gray-900 font-medium">{entry.totalProblems || 0}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-500">Points</span>
+                                                            <span className="text-gray-900 font-medium">{entry.totalScore}</span>
+                                                        </div>
+                                                        {entry.streak && entry.streak > 0 && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-gray-500">Current Streak</span>
+                                                                <span className="text-orange-600 font-medium">🔥 {entry.streak} days</span>
+                                                            </div>
+                                                        )}
+                                                        {entry.country && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-gray-500">Location</span>
+                                                                <span className="text-gray-900 font-medium">{entry.country}</span>
+                                                            </div>
+                                                        )}
+                                                        {entry.lastSubmission && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-gray-500">Last Active</span>
+                                                                <span className="text-gray-900 font-medium">{getTimeAgo(entry.lastSubmission)}</span>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <div className="pt-2.5 mt-2.5 border-t border-gray-100">
+                                                            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Problem Breakdown</div>
+                                                            <div className="grid grid-cols-3 gap-2 text-center">
+                                                                <div>
+                                                                    <div className="text-xs font-medium text-gray-900">{entry.easy || 0}</div>
+                                                                    <div className="text-[10px] text-gray-500">Easy</div>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-xs font-medium text-gray-900">{entry.medium || 0}</div>
+                                                                    <div className="text-[10px] text-gray-500">Medium</div>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-xs font-medium text-gray-900">{entry.hard || 0}</div>
+                                                                    <div className="text-[10px] text-gray-500">Hard</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                         
                                         <div className="flex gap-12 items-center">
@@ -298,8 +376,27 @@ export default function HomePage() {
                                                     <span className="text-gray-300">—</span>
                                                 )}
                                             </div>
-                                            <div className="text-right w-20">
-                                                <span className="text-lg font-semibold text-gray-900">{entry.totalScore}</span>
+                                            <div className="text-right w-20 relative group">
+                                                <span className="text-lg font-semibold text-gray-900 cursor-default">{entry.totalScore}</span>
+                                                {/* Tooltip */}
+                                                <div className="absolute bottom-full right-0 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 pointer-events-none">
+                                                    <div className="bg-white rounded-lg px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.15)] border border-gray-100">
+                                                        <div className="flex flex-col gap-1.5 text-xs">
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <span className="text-gray-500 font-normal">Easy</span>
+                                                                <span className="text-gray-900 font-medium">{entry.easy || 0}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <span className="text-gray-500 font-normal">Medium</span>
+                                                                <span className="text-gray-900 font-medium">{entry.medium || 0}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <span className="text-gray-500 font-normal">Hard</span>
+                                                                <span className="text-gray-900 font-medium">{entry.hard || 0}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="text-right w-20">
                                                 <span className="text-lg font-medium text-blue-600">{entry.todayPoints}</span>

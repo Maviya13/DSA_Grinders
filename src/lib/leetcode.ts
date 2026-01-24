@@ -52,6 +52,7 @@ async function fetchLeetCodeUser(username: string) {
         profile {
           ranking
           userAvatar
+          realName
           countryName
         }
         submitStatsGlobal {
@@ -61,27 +62,31 @@ async function fetchLeetCodeUser(username: string) {
           }
         }
         submissionCalendar
-        recentAcSubmissionList(limit: 5) {
-          id
-          title
-          titleSlug
-          timestamp
-        }
       }
     }
   `;
 
   const response = await fetch(LEETCODE_GRAPHQL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0',
+      'Referer': 'https://leetcode.com',
+    },
     body: JSON.stringify({ query, variables: { username } }),
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`LeetCode API error for ${username}:`, response.status, errorText);
     throw new Error(`LeetCode API error: ${response.status}`);
   }
 
   const data = await response.json();
+  
+  // Log the response to debug
+  console.log(`[LeetCode API] Response for ${username}:`, JSON.stringify(data, null, 2));
+  
   return data.data;
 }
 
@@ -104,16 +109,40 @@ export async function fetchLeetCodeStats(username: string) {
     const hard = acNum.find((s: any) => s.difficulty === 'Hard')?.count || 0;
     const total = acNum.find((s: any) => s.difficulty === 'All')?.count || 0;
     const ranking = userStats.matchedUser.profile?.ranking || 0;
-    const avatar = userStats.matchedUser.profile?.userAvatar || '';
+    
+    // LeetCode's public API doesn't return avatars, so we construct the URL
+    // Format: https://assets.leetcode.com/users/avatars/avatar_{timestamp}_{username}.png
+    // Since we can't get the exact URL, we'll use LeetCode's default or a placeholder service
+    const avatarFromAPI = userStats.matchedUser.profile?.userAvatar;
+    const avatar = avatarFromAPI || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=1a73e8&color=fff&size=128`;
+    
     const country = userStats.matchedUser.profile?.countryName || '';
-    const recentSubmissions = userStats.matchedUser.recentAcSubmissionList || [];
+    
+    // Debug: Log avatar data
+    console.log(`[LeetCode] Fetched data for ${username}:`, {
+      avatarFromAPI,
+      avatarFinal: avatar,
+      country,
+      hasProfile: !!userStats.matchedUser.profile,
+    });
     
     // Calculate streak from submission calendar
     const calendar = userStats.matchedUser.submissionCalendar;
     const streak = calculateStreak(calendar);
     
-    // Get last submission timestamp
-    const lastSubmission = recentSubmissions.length > 0 ? recentSubmissions[0].timestamp : null;
+    // Get last submission timestamp from calendar
+    let lastSubmission = null;
+    if (calendar) {
+      try {
+        const calendarObj = JSON.parse(calendar);
+        const timestamps = Object.keys(calendarObj).map(Number);
+        if (timestamps.length > 0) {
+          lastSubmission = Math.max(...timestamps).toString();
+        }
+      } catch (e) {
+        console.error('Error parsing submission calendar:', e);
+      }
+    }
 
     return {
       easy,
@@ -123,11 +152,7 @@ export async function fetchLeetCodeStats(username: string) {
       ranking,
       avatar,
       country,
-      recentSubmissions: recentSubmissions.map((s: any) => ({
-        title: s.title,
-        titleSlug: s.titleSlug,
-        timestamp: s.timestamp,
-      })),
+      recentSubmissions: [], // Not available from public API
       streak,
       lastSubmission,
     };
