@@ -34,8 +34,8 @@ export function verifyAdminCredentials(adminId: string, adminPassword: string): 
     return adminId === envAdminId && adminPassword === envAdminPassword;
 }
 
-export function requireAuth(handler: (req: NextRequest, user: any) => Promise<Response>) {
-    return async (req: NextRequest) => {
+export function requireAuth(handler: (req: NextRequest, user: any, context?: any) => Promise<Response>) {
+    return async (req: NextRequest, context?: any) => {
         const user = await getCurrentUser(req);
         if (!user) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {

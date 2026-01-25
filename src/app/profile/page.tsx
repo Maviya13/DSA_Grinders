@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ArrowLeft, Save, Phone, User } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Phone, User, Github, Linkedin } from "lucide-react";
 
 export default function ProfilePage() {
     const { user, token, isLoading: authLoading, updateUser } = useAuth();
