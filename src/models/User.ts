@@ -10,6 +10,7 @@ export interface IUser {
   github: string;
   linkedin?: string;
   phoneNumber?: string; // Optional phone number for WhatsApp
+  groups: mongoose.Types.ObjectId[];
   createdAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -22,6 +23,7 @@ const UserSchema = new mongoose.Schema({
   github: { type: String, required: true }, // GitHub profile is mandatory
   linkedin: { type: String, required: false }, // LinkedIn profile is optional
   phoneNumber: { type: String, required: false }, // Optional phone number for WhatsApp
+  groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],
   createdAt: { type: Date, default: Date.now },
 });
 
