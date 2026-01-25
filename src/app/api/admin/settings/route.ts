@@ -1,34 +1,17 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import { Settings } from '@/models/Settings';
 import { OPTIMAL_SCHEDULES } from '@/lib/schedule-helper';
 
-// Simple admin check
-function isAdmin(user: any): boolean {
-  const adminEmails = [
-    'admin@dsagrinders.com',
-  ];
-  
-  return adminEmails.includes(user.email.toLowerCase());
-}
-
 // Get current settings
-export const GET = requireAuth(async (req, user) => {
+export const GET = requireAdmin(async (req, user) => {
   try {
-    // Check if user is admin
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
     await dbConnect();
-    
+
     // Get or create settings
     let settings = await Settings.findOne({});
-    
+
     if (!settings) {
       // Create default settings if none exist
       settings = new Settings({});
@@ -66,23 +49,15 @@ export const GET = requireAuth(async (req, user) => {
 });
 
 // Update settings
-export const PUT = requireAuth(async (req, user) => {
+export const PUT = requireAdmin(async (req, user) => {
   try {
-    // Check if user is admin
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
     const updateData = await req.json();
 
     await dbConnect();
-    
+
     // Get or create settings
     let settings = await Settings.findOne({});
-    
+
     if (!settings) {
       settings = new Settings({});
     }
@@ -128,7 +103,7 @@ export const PUT = requireAuth(async (req, user) => {
         );
       }
       settings.maxDailyEmails = updateData.maxDailyEmails;
-      
+
       // Auto-generate optimal email schedule based on count
       if (updateData.maxDailyEmails > 0 && updateData.maxDailyEmails <= 5) {
         const optimalSchedule = OPTIMAL_SCHEDULES[updateData.maxDailyEmails as keyof typeof OPTIMAL_SCHEDULES];
@@ -145,7 +120,7 @@ export const PUT = requireAuth(async (req, user) => {
         );
       }
       settings.maxDailyWhatsapp = updateData.maxDailyWhatsapp;
-      
+
       // Auto-generate optimal WhatsApp schedule based on count
       if (updateData.maxDailyWhatsapp > 0 && updateData.maxDailyWhatsapp <= 5) {
         const optimalSchedule = OPTIMAL_SCHEDULES[updateData.maxDailyWhatsapp as keyof typeof OPTIMAL_SCHEDULES];
@@ -166,7 +141,7 @@ export const PUT = requireAuth(async (req, user) => {
 
     await settings.save();
 
-    console.log(`Admin ${user.name} updated automation settings`);
+    console.log('Admin updated automation settings');
 
     return NextResponse.json({
       success: true,
@@ -199,20 +174,12 @@ export const PUT = requireAuth(async (req, user) => {
 });
 
 // Reset daily counters (for testing or manual reset)
-export const POST = requireAuth(async (req, user) => {
+export const POST = requireAdmin(async (req, user) => {
   try {
-    // Check if user is admin
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
     await dbConnect();
-    
+
     const settings = await Settings.findOne({});
-    
+
     if (!settings) {
       return NextResponse.json(
         { error: 'Settings not found' },
@@ -224,10 +191,10 @@ export const POST = requireAuth(async (req, user) => {
     settings.emailsSentToday = 0;
     settings.whatsappSentToday = 0;
     settings.lastResetDate = new Date();
-    
+
     await settings.save();
 
-    console.log(`Admin ${user.name} reset daily counters`);
+    console.log('Admin reset daily counters');
 
     return NextResponse.json({
       success: true,

@@ -1,18 +1,9 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import nodemailer from 'nodemailer';
-
-// Simple admin check
-function isAdmin(user: any): boolean {
-  const adminEmails = [
-    'admin@dsagrinders.com',
-  ];
-  
-  return adminEmails.includes(user.email.toLowerCase());
-}
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -25,7 +16,7 @@ const transporter = nodemailer.createTransport({
 
 async function sendCustomEmail(toEmail: string, userName: string, subject: string, message: string) {
   const mailOptions = {
-    from: `"DSA Grinders Admin" <admin@dsagrinders.com>`,
+    from: `"DSA Grinders" <${process.env.SMTP_EMAIL}>`,
     to: toEmail,
     subject: subject,
     html: `
@@ -69,18 +60,8 @@ ${message}
 
   try {
     console.log(`Sending custom email to: ${toEmail}`);
-    console.log(`From: ${process.env.SMTP_EMAIL}`);
-    console.log(`Subject: ${subject}`);
-    
     const info = await transporter.sendMail(mailOptions);
-    
-    console.log(`✅ Email sent successfully to ${toEmail}:`, {
-      messageId: info.messageId,
-      response: info.response,
-      accepted: info.accepted,
-      rejected: info.rejected
-    });
-    
+    console.log(`✅ Email sent successfully to ${toEmail}`);
     return { success: true, info };
   } catch (error: any) {
     console.error(`❌ Email send error for ${toEmail}:`, error);
@@ -88,22 +69,14 @@ ${message}
   }
 }
 
-export const POST = requireAuth(async (req, user) => {
+export const POST = requireAdmin(async (req, user) => {
   try {
-    // Check if user is admin
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
-    const { 
-      userIds, 
-      messageType, 
-      emailSubject, 
-      emailMessage, 
-      whatsappMessage 
+    const {
+      userIds,
+      messageType,
+      emailSubject,
+      emailMessage,
+      whatsappMessage
     } = await req.json();
 
     if (!userIds || userIds.length === 0) {
@@ -121,10 +94,10 @@ export const POST = requireAuth(async (req, user) => {
     }
 
     await dbConnect();
-    
+
     // Get selected users
     const users = await User.find({ _id: { $in: userIds } }).select('-password');
-    
+
     if (users.length === 0) {
       return NextResponse.json(
         { error: 'No valid users found' },
@@ -146,12 +119,12 @@ export const POST = requireAuth(async (req, user) => {
       if (messageType === 'email' || messageType === 'both') {
         try {
           const emailResult = await sendCustomEmail(
-            targetUser.email, 
-            targetUser.name, 
-            emailSubject, 
+            targetUser.email,
+            targetUser.name,
+            emailSubject,
             emailMessage
           );
-          
+
           if (emailResult.success) {
             results.emailsSent++;
           } else {
@@ -168,7 +141,7 @@ export const POST = requireAuth(async (req, user) => {
       if ((messageType === 'whatsapp' || messageType === 'both') && targetUser.phoneNumber) {
         try {
           const whatsappResult = await sendWhatsAppMessage(targetUser.phoneNumber, whatsappMessage);
-          
+
           if (whatsappResult.success) {
             results.whatsappSent++;
           } else {

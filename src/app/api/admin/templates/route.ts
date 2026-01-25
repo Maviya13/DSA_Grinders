@@ -1,17 +1,7 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import { MessageTemplate } from '@/models/MessageTemplate';
-
-// Simple admin check
-function isAdmin(user: any): boolean {
-  const adminEmails = [
-    'admin@dsagrinders.com',
-  ];
-  
-  return adminEmails.includes(user.email.toLowerCase()) || 
-         user.email.toLowerCase().includes('admin');
-}
 
 // Default templates
 const defaultTemplates = [
@@ -100,20 +90,13 @@ DSA Grinders - Where weak coders become strong! 💀`,
   }
 ];
 
-export const GET = requireAuth(async (req, user) => {
+export const GET = requireAdmin(async (req, user) => {
   try {
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
     await dbConnect();
-    
+
     // Get all templates
     let templates = await MessageTemplate.find({}).sort({ type: 1, name: 1 });
-    
+
     // If no templates exist, create default ones
     if (templates.length === 0) {
       templates = await MessageTemplate.insertMany(defaultTemplates);
@@ -138,15 +121,8 @@ export const GET = requireAuth(async (req, user) => {
   }
 });
 
-export const POST = requireAuth(async (req, user) => {
+export const POST = requireAdmin(async (req, user) => {
   try {
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
     const { type, name, subject, content, variables } = await req.json();
 
     if (!type || !name || !content) {
@@ -185,15 +161,8 @@ export const POST = requireAuth(async (req, user) => {
   }
 });
 
-export const PUT = requireAuth(async (req, user) => {
+export const PUT = requireAdmin(async (req, user) => {
   try {
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
     const { id, type, name, subject, content, variables, isActive } = await req.json();
 
     if (!id) {

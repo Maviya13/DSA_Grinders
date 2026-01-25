@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { MessageTemplate } from '@/models/MessageTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import nodemailer from 'nodemailer';
-
-// Simple admin check
-function isAdmin(user: any): boolean {
-  const adminEmails = [
-    'admin@dsagrinders.com',
-  ];
-  
-  return adminEmails.includes(user.email.toLowerCase());
-}
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -26,27 +17,24 @@ const transporter = nodemailer.createTransport({
 
 // Fallback roasts and insults
 const ROASTS = [
-  "Learn DSA or you'll be delivering food your entire life!",
-  "Hey slacker! Close Netflix, open LeetCode! Or stay jobless!",
-  "Your friends are joining Google, you're still stuck on Two Sum!",
-  "Don't know DSA? No worries, start a food truck business!",
-  "Can't solve even one problem? Your luck is terrible dude!",
-  "Can't reverse an array? Your life will reverse too!",
-  "Bro who is this useless? Study a little bit!",
-  "Your struggle story will go viral on LinkedIn... with rejections!",
-  "During placement season, even HR will laugh at you!",
-  "Don't understand recursion? You're an infinite loop yourself!",
-  "Did nothing again today? Your productivity is worse than a pandemic!",
-  "Does your resume only have WhatsApp forwarding experience?",
-  "Came to be a DSA grinder, became a DSA disgrace!",
+  "Abe gadhe, DSA kar varna Swiggy pe delivery karega zindagi bhar! 🛵",
+  "Oye nikamme! Netflix band kar, LeetCode khol! Nahi toh jobless marega! 💀",
+  "Tere dost Google join kar rahe, tu abhi bhi Two Sum mein atka hai ullu! 😭",
+  "DSA nahi aati? Koi baat nahi, Chai Ka Thela khol le nalayak! ☕",
+  "Ek problem bhi solve nahi karta? Teri toh kismat hi kharab hai bhai! 🏫",
+  "Array reverse karna nahi aata? Teri life reverse ho jayegi bekaar! 🔄",
+  "Bro itna useless kaun hota hai? Thoda toh padhle kamina! 🙈",
+  "Teri struggle story LinkedIn pe viral hogi... rejection ke saath! 😅",
+  "Placement season mein tujhe dekhke HR log bhi hasenge! 🤣",
+  "Recursion samajh nahi aata? Tu khud ek infinite loop hai bc! 🔁",
 ];
 
 const INSULTS = [
-  "Even low-tier companies will reject you!",
-  "Your LeetCode streak makes coding itself cry!",
-  "You're so slow, even a turtle would win the race!",
-  "Bro you're so weak, can't even run a loop properly!",
-  "Your code has so many bugs, you should open a pesticide company!",
+  "Even low-tier companies will reject you! 🚫",
+  "Your LeetCode streak makes coding itself cry! 😭",
+  "You're so slow, even a turtle would win the race! 🐢",
+  "Your code has so many bugs, you should open a pesticide company! 🐛",
+  "Your problem-solving speed is slower than Windows 95! 💻",
 ];
 
 function getRandomRoast() {
@@ -72,7 +60,7 @@ async function sendTemplatedEmail(user: any, template: any, roast: string, insul
   const content = replaceTemplateVariables(template.content, user, roast, insult);
 
   const mailOptions = {
-    from: `"DSA Grinders Admin" <admin@dsagrinders.com>`,
+    from: `"DSA Grinders 🔥" <${process.env.SMTP_EMAIL}>`,
     to: user.email,
     subject: subject,
     html: content,
@@ -89,7 +77,7 @@ async function sendTemplatedEmail(user: any, template: any, roast: string, insul
 
 async function sendTemplatedWhatsApp(user: any, template: any, roast: string, insult: string) {
   const content = replaceTemplateVariables(template.content, user, roast, insult);
-  
+
   try {
     const result = await sendWhatsAppMessage(user.phoneNumber, content);
     return result;
@@ -99,53 +87,34 @@ async function sendTemplatedWhatsApp(user: any, template: any, roast: string, in
   }
 }
 
-export const POST = requireAuth(async (req, user) => {
+export const POST = requireAdmin(async (req, user) => {
   try {
-    // Check if user is admin
-    if (!isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
-      );
-    }
-
     await dbConnect();
-    
+
     // Get active templates
-    const whatsappTemplate = await MessageTemplate.findOne({ 
-      type: 'whatsapp_roast', 
-      isActive: true 
+    const whatsappTemplate = await MessageTemplate.findOne({
+      type: 'whatsapp_roast',
+      isActive: true
     });
-    const emailTemplate = await MessageTemplate.findOne({ 
-      type: 'email_roast', 
-      isActive: true 
+    const emailTemplate = await MessageTemplate.findOne({
+      type: 'email_roast',
+      isActive: true
     });
 
-    console.log(`Admin ${user.name} triggered manual roast sending - Templates:`, {
+    console.log('Admin triggered manual roast sending - Templates:', {
       whatsapp: !!whatsappTemplate,
       email: !!emailTemplate
     });
-    
-    // Get all non-admin users
-    const adminEmails = ['admin@dsagrinders.com'];
-    const users = await User.find({
-      email: { $nin: adminEmails }
-    }).select('-password');
-    
+
+    // Get all users
+    const users = await User.find({}).select('-password');
+
     if (users.length === 0) {
       return NextResponse.json(
         { error: 'No users found' },
         { status: 400 }
       );
     }
-
-    // Log user details for debugging
-    console.log('Users to process:', users.map(u => ({
-      name: u.name,
-      email: u.email,
-      hasPhone: !!u.phoneNumber,
-      phone: u.phoneNumber ? u.phoneNumber.substring(0, 5) + '***' : 'none'
-    })));
 
     const results = {
       emailsSent: 0,
@@ -160,83 +129,64 @@ export const POST = requireAuth(async (req, user) => {
     const batchRoast = getRandomRoast();
     const batchInsult = getRandomInsult();
 
-    console.log('Using batch roast:', batchRoast);
-    console.log('Using batch insult:', batchInsult);
-
     // Send roasts to each user
     for (const targetUser of users) {
       console.log(`Processing user: ${targetUser.name} (${targetUser.email})`);
-      
+
       // Send email roast using template
       try {
         if (emailTemplate) {
-          console.log(`Sending templated email to ${targetUser.name}`);
           const emailResult = await sendTemplatedEmail(targetUser, emailTemplate, batchRoast, batchInsult);
           if (emailResult.success) {
             results.emailsSent++;
-            console.log(`✅ Email sent successfully to ${targetUser.name}`);
           } else {
             results.emailsFailed++;
             results.errors.push(`Email failed for ${targetUser.name}: ${emailResult.error}`);
-            console.log(`❌ Email failed for ${targetUser.name}: ${emailResult.error}`);
           }
         } else {
-          console.log(`Using fallback email for ${targetUser.name}`);
           // Fallback to original email function
           const { sendDSAReminder } = await import('@/lib/email');
           const emailResult = await sendDSAReminder(targetUser.email, targetUser.name);
           if (emailResult.success) {
             results.emailsSent++;
-            console.log(`✅ Fallback email sent successfully to ${targetUser.name}`);
           } else {
             results.emailsFailed++;
             results.errors.push(`Email failed for ${targetUser.name}: ${emailResult.error}`);
-            console.log(`❌ Fallback email failed for ${targetUser.name}: ${emailResult.error}`);
           }
         }
       } catch (error: any) {
         results.emailsFailed++;
         results.errors.push(`Email failed for ${targetUser.name}: ${error.message}`);
-        console.log(`❌ Email exception for ${targetUser.name}: ${error.message}`);
       }
 
       // Send WhatsApp roast using template (only if phone number exists)
       if (targetUser.phoneNumber && targetUser.phoneNumber.trim()) {
-        console.log(`Attempting WhatsApp to ${targetUser.name} at ${targetUser.phoneNumber}`);
         try {
           if (whatsappTemplate) {
-            console.log(`Using WhatsApp template for ${targetUser.name}`);
             const whatsappResult = await sendTemplatedWhatsApp(targetUser, whatsappTemplate, batchRoast, batchInsult);
             if (whatsappResult.success) {
               results.whatsappSent++;
-              console.log(`✅ WhatsApp sent successfully to ${targetUser.name}`);
             } else {
               results.whatsappFailed++;
               results.errors.push(`WhatsApp failed for ${targetUser.name}: ${whatsappResult.error}`);
-              console.log(`❌ WhatsApp failed for ${targetUser.name}: ${whatsappResult.error}`);
             }
           } else {
-            console.log(`Using fallback WhatsApp for ${targetUser.name}`);
             // Fallback to original WhatsApp function
             const { sendDSAWhatsAppReminder } = await import('@/lib/whatsapp');
             const whatsappResult = await sendDSAWhatsAppReminder(targetUser.phoneNumber, targetUser.name);
             if (whatsappResult.success) {
               results.whatsappSent++;
-              console.log(`✅ Fallback WhatsApp sent successfully to ${targetUser.name}`);
             } else {
               results.whatsappFailed++;
               results.errors.push(`WhatsApp failed for ${targetUser.name}: ${whatsappResult.error}`);
-              console.log(`❌ Fallback WhatsApp failed for ${targetUser.name}: ${whatsappResult.error}`);
             }
           }
         } catch (error: any) {
           results.whatsappFailed++;
           results.errors.push(`WhatsApp failed for ${targetUser.name}: ${error.message}`);
-          console.log(`❌ WhatsApp exception for ${targetUser.name}: ${error.message}`);
         }
       } else {
         results.whatsappSkipped++;
-        console.log(`⏭️ WhatsApp skipped for ${targetUser.name} - no phone number`);
       }
 
       // Small delay to avoid overwhelming the APIs
@@ -252,7 +202,6 @@ export const POST = requireAuth(async (req, user) => {
     if (results.whatsappSkipped > 0) summary.push(`${results.whatsappSkipped} WhatsApp skipped (no phone)`);
 
     console.log('Manual roast sending completed:', summary.join(', '));
-    console.log('Detailed results:', results);
 
     return NextResponse.json({
       success: true,
@@ -260,18 +209,6 @@ export const POST = requireAuth(async (req, user) => {
       summary: summary.join(', '),
       totalUsers: users.length,
       usersWithWhatsApp: users.filter(u => u.phoneNumber && u.phoneNumber.trim()).length,
-      templatesUsed: {
-        whatsapp: whatsappTemplate?.name || 'fallback',
-        email: emailTemplate?.name || 'fallback'
-      },
-      debugInfo: {
-        batchRoast,
-        batchInsult,
-        usersProcessed: users.map(u => ({
-          name: u.name,
-          hasPhone: !!u.phoneNumber
-        }))
-      }
     });
 
   } catch (error: any) {

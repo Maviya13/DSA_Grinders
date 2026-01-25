@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Loader2, 
-  Send, 
-  Mail, 
-  MessageCircle, 
-  Users, 
+import AdminLogin from "@/components/AdminLogin";
+import {
+  Loader2,
+  Send,
+  Mail,
+  MessageCircle,
+  Users,
   Settings,
   Clock,
   Zap,
@@ -41,8 +41,9 @@ interface MessageTemplate {
 }
 
 export default function AdminPage() {
-  const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,27 +82,42 @@ export default function AdminPage() {
   const [testWhatsappTime, setTestWhatsappTime] = useState("");
   const [showManualTesting, setShowManualTesting] = useState(false);
 
+  // Check admin session on mount
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/');
-    }
-  }, [user, authLoading, router]);
+    const checkAdminSession = async () => {
+      try {
+        // Try to fetch admin users - if it works, we're logged in
+        const res = await fetch("/api/admin/users", {
+          credentials: 'include', // Include cookies
+        });
+
+        if (res.ok) {
+          setIsAdminLoggedIn(true);
+          const data = await res.json();
+          setUsers(data.users || []);
+        }
+      } catch (err) {
+        // Not logged in
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+    checkAdminSession();
+  }, []);
 
   useEffect(() => {
-    if (user && token) {
+    if (isAdminLoggedIn) {
       fetchUsers();
       fetchTemplates();
       fetchSettings();
     }
-  }, [user, token]);
+  }, [isAdminLoggedIn]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
       const res = await fetch("/api/admin/users", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -120,9 +136,7 @@ export default function AdminPage() {
   const fetchTemplates = async () => {
     try {
       const res = await fetch("/api/admin/templates", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -140,9 +154,7 @@ export default function AdminPage() {
     setSettingsLoading(true);
     try {
       const res = await fetch("/api/admin/settings", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -151,7 +163,7 @@ export default function AdminPage() {
 
       const data = await res.json();
       const settingsData = data.settings;
-      
+
       setSettings(settingsData);
       setAutomationEnabled(settingsData.automationEnabled);
       setEmailAutomationEnabled(settingsData.emailAutomationEnabled);
@@ -176,9 +188,9 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
+        credentials: 'include',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           automationEnabled,
@@ -193,14 +205,14 @@ export default function AdminPage() {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to update settings");
       }
 
       setSuccess("Settings updated successfully!");
       setSettings(data.settings);
-      
+
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
@@ -227,7 +239,7 @@ export default function AdminPage() {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to trigger cron job");
       }
@@ -242,10 +254,10 @@ export default function AdminPage() {
         ⏭️ ${summary.whatsappSkipped || 0} WhatsApp skipped
         
         ${data.message || ''}`);
-      
+
       // Refresh settings to see updated counters
       fetchSettings();
-      
+
       setTimeout(() => {
         setSuccess(null);
       }, 8000);
@@ -274,9 +286,9 @@ export default function AdminPage() {
 
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
+        credentials: 'include',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           automationEnabled,
@@ -291,7 +303,7 @@ export default function AdminPage() {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to update test times");
       }
@@ -301,11 +313,11 @@ export default function AdminPage() {
         📱 WhatsApp: ${testWhatsappTime || 'unchanged'}
         
         Now click "Test Cron Job Now" to test!`);
-      
+
       setSettings(data.settings);
       setEmailSchedule(newEmailSchedule);
       setWhatsappSchedule(newWhatsappSchedule);
-      
+
       setTimeout(() => {
         setSuccess(null);
       }, 5000);
@@ -319,11 +331,11 @@ export default function AdminPage() {
 
   const getCurrentTime = () => {
     const now = new Date();
-    return now.toLocaleTimeString('en-IN', { 
-      timeZone: 'Asia/Kolkata', 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return now.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -347,7 +359,7 @@ export default function AdminPage() {
     if (schedule.length === 0) return "No messages scheduled";
     if (schedule.length === 1) return `Once daily at ${formatTime(schedule[0])}`;
     if (schedule.length === 2) return `Twice daily at ${formatTime(schedule[0])} and ${formatTime(schedule[1])}`;
-    
+
     const times = schedule.map(formatTime);
     const lastTime = times.pop();
     return `${schedule.length} times daily: ${times.join(', ')} and ${lastTime}`;
@@ -361,9 +373,9 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/templates", {
         method: "PUT",
+        credentials: 'include',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           id: template.id,
@@ -377,7 +389,7 @@ export default function AdminPage() {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to update template");
       }
@@ -438,9 +450,9 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/send-messages", {
         method: "POST",
+        credentials: 'include',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           userIds: selectedUsers,
@@ -452,13 +464,13 @@ export default function AdminPage() {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to send messages");
       }
 
       setSuccess(`Messages sent successfully! ${data.summary}`);
-      
+
       // Clear form
       setSelectedUsers([]);
       setEmailMessage("");
@@ -479,14 +491,14 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/send-roasts", {
         method: "POST",
+        credentials: 'include',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to send roasts");
       }
@@ -501,8 +513,8 @@ export default function AdminPage() {
   };
 
   const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
@@ -516,7 +528,7 @@ export default function AdminPage() {
     setSelectedUsers([]);
   };
 
-  if (authLoading) {
+  if (checkingSession) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -524,7 +536,9 @@ export default function AdminPage() {
     );
   }
 
-  if (!user) return null;
+  if (!isAdminLoggedIn) {
+    return <AdminLogin onLoginSuccess={() => setIsAdminLoggedIn(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans">
@@ -545,7 +559,7 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-[1000px] mx-auto pt-24 pb-12 px-6">
-        
+
         {/* Page Title */}
         <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <h1 className="text-4xl font-normal tracking-tight text-gray-900 mb-4">
@@ -581,11 +595,10 @@ export default function AdminPage() {
               <button
                 key={key}
                 onClick={() => setActiveTab(key as any)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all ${
-                  activeTab === key
-                    ? 'bg-white text-blue-700 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all ${activeTab === key
+                  ? 'bg-white text-blue-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 <Icon className="h-4 w-4" />
                 {label}
@@ -652,11 +665,10 @@ export default function AdminPage() {
                   <button
                     key={value}
                     onClick={() => setMessageType(value as any)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      messageType === value
-                        ? 'bg-blue-100 text-blue-700 border-2 border-blue-200'
-                        : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:bg-gray-100'
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${messageType === value
+                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-200'
+                      : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:bg-gray-100'
+                      }`}
                   >
                     <Icon className="h-4 w-4" />
                     {label}
@@ -739,7 +751,7 @@ export default function AdminPage() {
                   </Button>
                 </div>
               </div>
-              
+
               {isLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
@@ -749,9 +761,8 @@ export default function AdminPage() {
                   {users.map((user) => (
                     <div
                       key={user.id}
-                      className={`flex items-center gap-3 p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
-                        selectedUsers.includes(user.id) ? 'bg-blue-50' : ''
-                      }`}
+                      className={`flex items-center gap-3 p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${selectedUsers.includes(user.id) ? 'bg-blue-50' : ''
+                        }`}
                       onClick={() => toggleUserSelection(user.id)}
                     >
                       <input
@@ -777,7 +788,7 @@ export default function AdminPage() {
                   ))}
                 </div>
               )}
-              
+
               {selectedUsers.length > 0 && (
                 <p className="text-sm text-blue-600 mt-2 ml-1">
                   {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} selected
@@ -816,9 +827,7 @@ export default function AdminPage() {
                     try {
                       const res = await fetch("/api/admin/init-templates", {
                         method: "POST",
-                        headers: {
-                          "Authorization": `Bearer ${token}`
-                        }
+                        credentials: 'include'
                       });
                       const data = await res.json();
                       if (res.ok) {
@@ -996,11 +1005,11 @@ export default function AdminPage() {
                       <div className="bg-blue-50 rounded-xl p-4 text-center">
                         <p className="text-sm font-medium text-gray-900">Current IST</p>
                         <p className="text-lg font-mono text-blue-600">
-                          {new Date().toLocaleTimeString('en-IN', { 
-                            timeZone: 'Asia/Kolkata', 
-                            hour12: false, 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                          {new Date().toLocaleTimeString('en-IN', {
+                            timeZone: 'Asia/Kolkata',
+                            hour12: false,
+                            hour: '2-digit',
+                            minute: '2-digit'
                           })}
                         </p>
                         <p className="text-xs text-gray-500">For testing timing</p>
@@ -1020,7 +1029,7 @@ export default function AdminPage() {
                     {/* Master Controls */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium text-gray-900">Master Controls</h3>
-                      
+
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                         <div>
                           <p className="font-medium text-gray-900">Master Automation</p>
@@ -1073,7 +1082,7 @@ export default function AdminPage() {
                     {/* Scheduling */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium text-gray-900">Daily Schedule</h3>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
                           <Label className="text-gray-700 font-medium text-sm ml-1 flex items-center gap-2">
@@ -1124,7 +1133,7 @@ export default function AdminPage() {
                     {/* Frequency Limits */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium text-gray-900">Daily Limits</h3>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="maxEmails" className="text-gray-700 font-medium text-sm ml-1">
@@ -1167,7 +1176,7 @@ export default function AdminPage() {
                     {/* Advanced Options */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium text-gray-900">Advanced Options</h3>
-                      
+
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                         <div>
                           <p className="font-medium text-gray-900">Skip Weekends</p>
@@ -1203,158 +1212,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Manual Testing Section */}
-                <div className="bg-orange-50 rounded-3xl border border-orange-200 p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-orange-600" />
-                      Manual Testing Controls
-                    </h3>
-                    <Button
-                      onClick={() => setShowManualTesting(!showManualTesting)}
-                      variant="outline"
-                      size="sm"
-                      className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                    >
-                      {showManualTesting ? 'Hide' : 'Show'} Testing Panel
-                    </Button>
-                  </div>
-
-                  {showManualTesting && (
-                    <div className="space-y-6">
-                      <div className="bg-white rounded-xl p-6 border border-orange-200">
-                        <h4 className="font-medium text-gray-900 mb-4">🕐 Set Custom Test Times</h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <Label htmlFor="testEmailTime" className="text-sm font-medium text-gray-700 mb-2 block">
-                              Test Email Time
-                            </Label>
-                            <Input
-                              id="testEmailTime"
-                              type="time"
-                              value={testEmailTime}
-                              onChange={(e) => setTestEmailTime(e.target.value)}
-                              className="h-10 px-3 bg-gray-50 border-gray-300 rounded-lg"
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="testWhatsappTime" className="text-sm font-medium text-gray-700 mb-2 block">
-                              Test WhatsApp Time
-                            </Label>
-                            <Input
-                              id="testWhatsappTime"
-                              type="time"
-                              value={testWhatsappTime}
-                              onChange={(e) => setTestWhatsappTime(e.target.value)}
-                              className="h-10 px-3 bg-gray-50 border-gray-300 rounded-lg"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex gap-3 mb-4">
-                          <Button
-                            onClick={setCurrentTimeForTesting}
-                            variant="outline"
-                            size="sm"
-                            className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                          >
-                            📍 Use Current Time ({getCurrentTime()})
-                          </Button>
-                          
-                          <Button
-                            onClick={setTestTimes}
-                            disabled={isSending}
-                            size="sm"
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                            ⚡ Set Test Times
-                          </Button>
-                        </div>
-
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <p>• <strong>Step 1:</strong> Set your desired test times above</p>
-                          <p>• <strong>Step 2:</strong> Click "Set Test Times" to update the schedule</p>
-                          <p>• <strong>Step 3:</strong> Click "Test Cron Job Now" to trigger immediately</p>
-                          <p>• <strong>Tip:</strong> Use "Use Current Time" for immediate testing</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-xl p-6 border border-orange-200">
-                        <h4 className="font-medium text-gray-900 mb-3">🧪 Quick Actions</h4>
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={triggerCronJob}
-                            disabled={isSending}
-                            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-                          >
-                            {isSending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Zap className="h-4 w-4" />
-                            )}
-                            🧪 Test Cron Job Now (Dev Mode)
-                          </Button>
-                          
-                          <Button
-                            onClick={() => {
-                              setTestEmailTime("");
-                              setTestWhatsappTime("");
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                          >
-                            🗑️ Clear Test Times
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Cron Job Info */}
-                <div className="bg-blue-50 rounded-3xl border border-blue-200 p-8">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-blue-600" />
-                    Automation Setup & Information
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                      <h4 className="font-medium text-yellow-800 mb-2">⚠️ Cron Job Setup Required</h4>
-                      <p className="text-sm text-yellow-700 mb-3">
-                        For automatic scheduling, you need to set up a cron job or use Vercel Cron Jobs.
-                      </p>
-                      <div className="space-y-2 text-sm text-yellow-700">
-                        <p><strong>Option 1 - Vercel Cron (Recommended):</strong></p>
-                        <p>Add to <code className="bg-yellow-100 px-1 rounded">vercel.json</code>:</p>
-                        <pre className="bg-yellow-100 p-2 rounded text-xs overflow-x-auto">
-{`{
-  "crons": [{
-    "path": "/api/cron",
-    "schedule": "*/15 * * * *"
-  }]
-}`}
-                        </pre>
-                        <p><strong>Option 2 - External Cron Service:</strong></p>
-                        <p>Set up a cron job to call: <code className="bg-yellow-100 px-1 rounded">GET https://yourdomain.com/api/cron</code></p>
-                        <p>Include header: <code className="bg-yellow-100 px-1 rounded">Authorization: Bearer {process.env.CRON_SECRET}</code></p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm text-gray-700">
-                      <p>• <strong>Current Status:</strong> Manual testing only (use "Test Cron Job Now" button)</p>
-                      <p>• The system checks for scheduled messages every 15 minutes when cron is set up</p>
-                      <p>• Messages are sent only during the configured time windows</p>
-                      <p>• Daily limits reset at midnight (IST)</p>
-                      <p>• Manual sends from admin panel don't count toward daily limits</p>
-                      <p>• All times are in Indian Standard Time (IST)</p>
-                    </div>
-                  </div>
-                </div>
               </>
             )}
           </div>

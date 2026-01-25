@@ -7,12 +7,11 @@ import { useAuth } from "@/components/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ArrowLeft, Save, Phone, User, MessageCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Phone, User } from "lucide-react";
 
 export default function ProfilePage() {
     const { user, token, isLoading: authLoading } = useAuth();
     const router = useRouter();
-    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -54,15 +53,13 @@ export default function ProfilePage() {
             });
 
             const data = await res.json();
-            
+
             if (!res.ok) {
                 throw new Error(data.error || "Failed to update profile");
             }
 
             setSuccess("Profile updated successfully!");
-            
-            // Update the auth context with new user data
-            // Note: You might want to add an updateUser method to AuthContext
+
             setTimeout(() => {
                 setSuccess(null);
             }, 3000);
@@ -71,48 +68,6 @@ export default function ProfilePage() {
             setError(err.message);
         } finally {
             setIsSaving(false);
-        }
-    };
-
-    const testWhatsApp = async () => {
-        if (!phoneNumber.trim()) {
-            setError("Please add a phone number first");
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        setSuccess(null);
-
-        try {
-            const res = await fetch("/api/whatsapp/test", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    phoneNumber: phoneNumber.trim(),
-                    type: "roast"
-                }),
-            });
-
-            const data = await res.json();
-            
-            if (!res.ok) {
-                throw new Error(data.error || "Failed to send WhatsApp message");
-            }
-
-            if (data.success) {
-                setSuccess("WhatsApp test message sent successfully! 🎉");
-            } else {
-                throw new Error(data.error || "Failed to send WhatsApp message");
-            }
-
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -153,7 +108,7 @@ export default function ProfilePage() {
             </header>
 
             <main className="max-w-[600px] mx-auto pt-24 pb-12 px-6">
-                
+
                 {/* Page Title */}
                 <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <h1 className="text-4xl font-normal tracking-tight text-gray-900 mb-4">
@@ -166,7 +121,7 @@ export default function ProfilePage() {
 
                 {/* Profile Form */}
                 <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-[0_1px_3px_rgba(0,0,0,0.12)] mb-8">
-                    
+
                     {error && (
                         <div className="mb-6 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm border border-red-100 flex items-center gap-2">
                             <span className="h-1.5 w-1.5 rounded-full bg-red-600 flex-shrink-0" />
@@ -182,7 +137,7 @@ export default function ProfilePage() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        
+
                         {/* Name Field */}
                         <div className="space-y-2">
                             <Label htmlFor="name" className="text-gray-700 font-medium text-sm ml-1 flex items-center gap-2">
@@ -265,35 +220,6 @@ export default function ProfilePage() {
                         </div>
                     </form>
                 </div>
-
-                {/* WhatsApp Test Section */}
-                {phoneNumber.trim() && (
-                    <div className="bg-green-50 rounded-3xl border border-green-200 p-8 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-                        <div className="text-center">
-                            <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <MessageCircle className="h-6 w-6 text-green-600" />
-                            </div>
-                            <h3 className="text-xl font-medium text-gray-900 mb-2">Test WhatsApp Integration</h3>
-                            <p className="text-gray-600 mb-6">
-                                Send a test roast message to your WhatsApp to make sure everything is working correctly.
-                            </p>
-                            <Button
-                                onClick={testWhatsApp}
-                                disabled={isLoading}
-                                className="bg-green-600 hover:bg-green-700 text-white font-medium rounded-full px-8 h-12 shadow-none transition-all flex items-center justify-center gap-2"
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        <MessageCircle className="h-4 w-4" />
-                                        Send Test Message
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                )}
 
                 {/* Info Section */}
                 <div className="mt-8 bg-blue-50 rounded-3xl border border-blue-200 p-6">

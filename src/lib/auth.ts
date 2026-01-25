@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getTokenFromHeader, verifyToken, JWTPayload } from './jwt';
 import dbConnect from './mongodb';
-import { User } from '@/models/User';
+import { User, IUser } from '@/models/User';
 
 export async function getCurrentUser(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
@@ -21,6 +21,19 @@ export async function getCurrentUser(req: NextRequest) {
     return user;
 }
 
+// Checks admin password from environment variables - no hardcoding!
+export function verifyAdminCredentials(adminId: string, adminPassword: string): boolean {
+    const envAdminId = process.env.ADMIN_ID;
+    const envAdminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!envAdminId || !envAdminPassword) {
+        console.error('ADMIN_ID or ADMIN_PASSWORD not set in environment variables');
+        return false;
+    }
+
+    return adminId === envAdminId && adminPassword === envAdminPassword;
+}
+
 export function requireAuth(handler: (req: NextRequest, user: any) => Promise<Response>) {
     return async (req: NextRequest) => {
         const user = await getCurrentUser(req);
@@ -31,5 +44,34 @@ export function requireAuth(handler: (req: NextRequest, user: any) => Promise<Re
             });
         }
         return handler(req, user);
+    };
+}
+
+// Admin auth middleware - checks for admin session token
+export function requireAdmin(handler: (req: NextRequest, user: any) => Promise<Response>) {
+    return async (req: NextRequest) => {
+        // Check for admin session token in cookies or Authorization header
+        const adminToken = req.cookies.get('admin_session')?.value ||
+            req.headers.get('X-Admin-Token');
+
+        const expectedToken = process.env.ADMIN_SESSION_SECRET;
+
+        if (!expectedToken) {
+            console.error('ADMIN_SESSION_SECRET not set in environment variables');
+            return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        if (!adminToken || adminToken !== expectedToken) {
+            return new Response(JSON.stringify({ error: 'Admin access denied. Please login via /admin' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Admin is authenticated, proceed without needing a user object
+        return handler(req, { isAdmin: true });
     };
 }

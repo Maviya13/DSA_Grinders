@@ -1,55 +1,41 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
-import { signToken } from '@/lib/jwt';
 
-export async function POST(req: Request) {
+export const GET = requireAuth(async (req, user) => {
   try {
-    await dbConnect();
+    // Secret key check to prevent unauthorized use (optional but recommended)
+    const url = new URL(req.url);
+    const secret = url.searchParams.get('secret');
 
-    const adminEmail = 'admin@dsagrinders.com';
-    const adminPassword = 'admin123';
-    const adminName = 'Super Admin';
-    const adminLeetcode = 'admin_user'; // Dummy LeetCode username
-
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: adminEmail });
-    
-    if (existingAdmin) {
-      return NextResponse.json(
-        { message: 'Admin account already exists', email: adminEmail },
-        { status: 200 }
-      );
+    // In production, you should use a strong secret env variable
+    // For now, checking if secret is 'dsa-admin-claim'
+    if (secret !== 'dsa-admin-claim') {
+      return NextResponse.json({ error: 'Invalid secret key' }, { status: 403 });
     }
 
-    // Create admin user
-    const adminUser = await User.create({
-      name: adminName,
-      email: adminEmail,
-      password: adminPassword,
-      leetcodeUsername: adminLeetcode,
-    });
+    await dbConnect();
 
-    // Generate JWT token
-    const token = signToken({ userId: adminUser._id.toString(), email: adminUser.email });
+    // Update user role to admin
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { role: 'admin' },
+      { new: true }
+    );
 
     return NextResponse.json({
-      message: 'Admin account created successfully!',
-      credentials: {
-        email: adminEmail,
-        password: adminPassword,
-      },
-      token,
+      success: true,
+      message: `User ${user.email} promoted to admin successfully!`,
       user: {
-        id: adminUser._id,
-        name: adminUser.name,
-        email: adminUser.email,
-        leetcodeUsername: adminUser.leetcodeUsername,
-      },
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role
+      }
     });
-
   } catch (error: any) {
-    console.error('Admin setup error:', error);
+    console.error('Admin claim error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+});

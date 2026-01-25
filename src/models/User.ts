@@ -8,6 +8,7 @@ export interface IUser {
   password: string;
   leetcodeUsername: string;
   phoneNumber?: string; // Optional phone number for WhatsApp
+  role: 'user' | 'admin';
   createdAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -18,6 +19,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   leetcodeUsername: { type: String, required: true, unique: true },
   phoneNumber: { type: String, required: false }, // Optional phone number for WhatsApp
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -33,4 +35,3 @@ UserSchema.methods.comparePassword = async function (candidatePassword: string):
 };
 
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
-
