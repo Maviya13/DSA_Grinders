@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/AuthContext";
 import Script from "next/script";
 import SplashScreen from "@/components/SplashScreen";
+import OnboardingModal from "@/components/OnboardingModal";
 
 export const metadata: Metadata = {
   title: "DSA Grinders | Grind LeetCode Together",
@@ -50,7 +51,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="DSA Grinders" />
-        
+
         {/* Additional PWA Meta Tags */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="DSA Grinders" />
@@ -60,9 +61,10 @@ export default function RootLayout({
         <ErrorReporter />
         <AuthProvider>
           {children}
+          <OnboardingModal />
         </AuthProvider>
         <Toaster />
-        
+
         {/* Service Worker Registration */}
         <Script id="sw-register" strategy="afterInteractive">
           {`

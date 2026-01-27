@@ -1,48 +1,66 @@
 import { NextResponse, NextRequest } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import { User } from '@/models/User';
-import { DailyStat } from '@/models/DailyStat';
+import { db } from '@/db/drizzle';
+import { users, dailyStats } from '@/db/schema';
+import { eq, or, and, desc, ne, notLike, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
-
     // Exclude admin accounts from leaderboard
-    const adminEmails = ['admin@dsagrinders.com'];
-    const users = await User.find({
-      email: {
-        $nin: adminEmails,
-        $not: /admin/i // Exclude any email containing 'admin'
-      }
-    }).select('-password');
+    // We can filter by role or by email pattern
+    const allUsers = await db.select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      leetcodeUsername: users.leetcodeUsername,
+      github: users.github,
+      linkedin: users.linkedin,
+    })
+      .from(users)
+      .where(
+        and(
+          ne(users.role, 'admin'),
+          notLike(users.leetcodeUsername, 'pending_%')
+        )
+      );
 
     const today = new Date().toISOString().split('T')[0];
 
     const leaderboard = [];
-    for (const user of users) {
+    for (const user of allUsers) {
       // Get today's stat specifically
-      const todayStat = await DailyStat.findOne({ userId: user._id, date: today });
-      // Get latest stat for total problems
-      const latestStat = await DailyStat.findOne({ userId: user._id }).sort({ date: -1 });
+      const [todayStat] = await db.select()
+        .from(dailyStats)
+        .where(and(eq(dailyStats.userId, user.id), eq(dailyStats.date, today)))
+        .limit(1);
+
+      // Get latest stat for other data points
+      const [latestStat] = await db.select()
+        .from(dailyStats)
+        .where(eq(dailyStats.userId, user.id))
+        .orderBy(desc(dailyStats.date))
+        .limit(1);
 
       // Calculate total score: easy=1, medium=3, hard=6
-      const totalScore = (latestStat?.easy || 0) * 1 + (latestStat?.medium || 0) * 3 + (latestStat?.hard || 0) * 6;
+      const easy = latestStat?.easy ?? 0;
+      const medium = latestStat?.medium ?? 0;
+      const hard = latestStat?.hard ?? 0;
+      const totalScore = easy * 1 + medium * 3 + hard * 6;
 
       leaderboard.push({
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         leetcodeUsername: user.leetcodeUsername,
         todayPoints: todayStat?.todayPoints || 0,
         totalScore: totalScore,
-        totalProblems: latestStat?.total || 0,
-        easy: latestStat?.easy || 0,
-        medium: latestStat?.medium || 0,
-        hard: latestStat?.hard || 0,
-        ranking: latestStat?.ranking || 0,
-        avatar: latestStat?.avatar || '',
-        country: latestStat?.country || '',
-        streak: latestStat?.streak || 0,
+        totalProblems: latestStat?.total ?? 0,
+        easy: easy,
+        medium: medium,
+        hard: hard,
+        ranking: latestStat?.ranking ?? 0,
+        avatar: latestStat?.avatar ?? '',
+        country: latestStat?.country ?? '',
+        streak: latestStat?.streak ?? 0,
         lastSubmission: latestStat?.lastSubmission || null,
         recentProblems: latestStat?.recentProblems || [],
         lastUpdated: latestStat?.date || null,
@@ -57,10 +75,8 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'daily'; // Default to daily
 
     if (type === 'daily') {
-      // Sort by today's points (descending), then total score
       leaderboard.sort((a, b) => b.todayPoints - a.todayPoints || b.totalScore - a.totalScore);
     } else {
-      // Sort by total score (descending), then today's points
       leaderboard.sort((a, b) => b.totalScore - a.totalScore || b.todayPoints - a.todayPoints);
     }
 

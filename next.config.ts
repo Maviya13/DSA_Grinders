@@ -1,10 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig & {
-  eslint?: {
-    ignoreDuringBuilds?: boolean;
-  };
-} = {
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
@@ -19,9 +15,6 @@ const nextConfig: NextConfig & {
   },
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   // PWA Configuration
   async headers() {

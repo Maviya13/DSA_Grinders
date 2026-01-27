@@ -1,5 +1,6 @@
-import dbConnect from './mongodb';
-import { DailyStat } from '@/models/DailyStat';
+import { db } from '@/db/drizzle';
+import { dailyStats } from '@/db/schema';
+import { eq, and, lt, desc } from 'drizzle-orm';
 
 const LEETCODE_GRAPHQL = 'https://leetcode.com/graphql';
 
@@ -163,19 +164,22 @@ export async function fetchLeetCodeStats(username: string) {
   }
 }
 
-export async function updateDailyStatsForUser(userId: string, leetcodeUsername: string) {
-  await dbConnect();
+export async function updateDailyStatsForUser(userId: number, leetcodeUsername: string) {
   const stats = await fetchLeetCodeStats(leetcodeUsername);
   const today = new Date().toISOString().split('T')[0];
 
   // Find today's stat or the most recent one
-  let todayStat = await DailyStat.findOne({ userId, date: today });
+  const [todayStat] = await db.select()
+    .from(dailyStats)
+    .where(and(eq(dailyStats.userId, userId), eq(dailyStats.date, today)))
+    .limit(1);
 
   // Get yesterday's or most recent stat to calculate points
-  const lastStat = await DailyStat.findOne({
-    userId,
-    date: { $lt: today }
-  }).sort({ date: -1 });
+  const [lastStat] = await db.select()
+    .from(dailyStats)
+    .where(and(eq(dailyStats.userId, userId), lt(dailyStats.date, today)))
+    .orderBy(desc(dailyStats.date))
+    .limit(1);
 
   // Calculate today's points with weighted scoring
   // Easy = 1 point, Medium = 3 points, Hard = 6 points
@@ -184,11 +188,11 @@ export async function updateDailyStatsForUser(userId: string, leetcodeUsername: 
 
   if (lastStat) {
     // Calculate points based on new problems solved since last stat
-    const newEasy = Math.max(0, stats.easy - lastStat.easy);
-    const newMedium = Math.max(0, stats.medium - lastStat.medium);
-    const newHard = Math.max(0, stats.hard - lastStat.hard);
+    const newEasy = Math.max(0, stats.easy - (lastStat.easy ?? 0));
+    const newMedium = Math.max(0, stats.medium - (lastStat.medium ?? 0));
+    const newHard = Math.max(0, stats.hard - (lastStat.hard ?? 0));
     todayPoints = newEasy * 1 + newMedium * 3 + newHard * 6;
-    previousTotal = lastStat.total;
+    previousTotal = lastStat.total ?? 0;
   } else {
     // First ever entry for this user, no points yet
     previousTotal = stats.total;
@@ -213,9 +217,19 @@ export async function updateDailyStatsForUser(userId: string, leetcodeUsername: 
     todayPoints,
   };
 
-  return await DailyStat.findOneAndUpdate(
-    { userId, date: today },
-    update,
-    { upsert: true, new: true }
-  );
+  if (todayStat) {
+    await db.update(dailyStats)
+      .set(update)
+      .where(and(eq(dailyStats.userId, userId), eq(dailyStats.date, today)));
+    return todayStat; // Or re-fetch if needed
+  } else {
+    const [newStat] = await db.insert(dailyStats)
+      .values({
+        userId,
+        date: today,
+        ...update,
+      })
+      .returning();
+    return newStat;
+  }
 }

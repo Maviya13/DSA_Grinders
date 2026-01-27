@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import { User } from '@/models/User';
-import { MessageTemplate } from '@/models/MessageTemplate';
-import { Settings } from '@/models/Settings';
+import { db } from '@/db/drizzle';
+import { users, messageTemplates, settings } from '@/db/schema';
+import { eq, ne, and, lt, lte, or, desc, notLike } from 'drizzle-orm';
 import { updateDailyStatsForUser } from '@/lib/leetcode';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import nodemailer from 'nodemailer';
@@ -18,18 +17,19 @@ const transporter = nodemailer.createTransport({
 
 
 // Helper function to check if today should be skipped
-function shouldSkipToday(settings: any): boolean {
+function shouldSkipToday(s: any): boolean {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
 
   // Skip weekends if enabled
-  if (settings.skipWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
+  if (s.skipWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
     return true;
   }
 
   // Check custom skip dates
   const today = now.toDateString();
-  if (settings.customSkipDates && settings.customSkipDates.some((date: Date) =>
+  const customSkipDates = (s.customSkipDates as string[]) || [];
+  if (customSkipDates.some((date: string) =>
     new Date(date).toDateString() === today
   )) {
     return true;
@@ -39,20 +39,25 @@ function shouldSkipToday(settings: any): boolean {
 }
 
 // Helper function to reset daily counters if needed
-async function resetDailyCountersIfNeeded(settings: any): Promise<any> {
+async function resetDailyCountersIfNeeded(s: any): Promise<any> {
   const now = new Date();
-  const lastReset = new Date(settings.lastResetDate);
+  const lastReset = s.lastResetDate ? new Date(s.lastResetDate) : new Date(0);
 
   // Check if it's a new day
   if (now.toDateString() !== lastReset.toDateString()) {
-    settings.emailsSentToday = 0;
-    settings.whatsappSentToday = 0;
-    settings.lastResetDate = now;
-    await settings.save();
+    const [updated] = await db.update(settings)
+      .set({
+        emailsSentToday: 0,
+        whatsappSentToday: 0,
+        lastResetDate: now,
+      })
+      .where(eq(settings.id, s.id))
+      .returning();
     console.log('Daily counters reset for new day');
+    return updated;
   }
 
-  return settings;
+  return s;
 }
 
 // Helper function to check if current time matches any scheduled time
@@ -110,7 +115,7 @@ async function sendTemplatedEmail(user: any, template: any, roast: string, insul
   const content = replaceTemplateVariables(template.content, user, roast, insult);
 
   const mailOptions = {
-    from: `"DSA Grinders" <admin@dsagrinders.com>`,
+    from: `"DSA Grinders" <${process.env.SMTP_EMAIL}>`,
     to: user.email,
     subject: subject,
     html: content,
@@ -138,10 +143,9 @@ async function sendTemplatedWhatsApp(user: any, template: any, roast: string, in
 }
 
 export async function GET(req: Request) {
-  // Auth check using CRON_SECRET - works with any external cron service (cron-job.org, easycron, etc.)
+  // Auth check using CRON_SECRET
   const authHeader = req.headers.get('authorization');
 
-  // Check for CRON_SECRET in Authorization header (Bearer token)
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     console.log('Unauthorized cron access attempt');
     return new Response('Unauthorized - Include Authorization: Bearer <CRON_SECRET> header', { status: 401 });
@@ -154,52 +158,53 @@ export async function GET(req: Request) {
   });
 
   try {
-    await dbConnect();
-
     // Get automation settings
-    let settings = await Settings.findOne({});
-    if (!settings) {
-      // Create default settings if none exist
-      settings = new Settings({});
-      await settings.save();
+    let [s] = await db.select().from(settings).limit(1);
+    if (!s) {
+      [s] = await db.insert(settings).values({}).returning();
       console.log('Created default automation settings');
     }
 
     // Handle migration from old format to new format
-    if (!settings.emailSchedule || settings.emailSchedule.length === 0) {
-      settings.emailSchedule = ["09:00"];
+    let needsUpdate = false;
+    const updatePayload: any = {};
+
+    if (!s.emailSchedule || (s.emailSchedule as string[]).length === 0) {
+      updatePayload.emailSchedule = ["09:00"];
+      needsUpdate = true;
       console.log('🔄 Migrated emailSchedule to new format');
     }
-    if (!settings.whatsappSchedule || settings.whatsappSchedule.length === 0) {
-      settings.whatsappSchedule = ["09:30"];
+    if (!s.whatsappSchedule || (s.whatsappSchedule as string[]).length === 0) {
+      updatePayload.whatsappSchedule = ["09:30"];
+      needsUpdate = true;
       console.log('🔄 Migrated whatsappSchedule to new format');
     }
 
-    // Save migration changes
-    await settings.save();
+    if (needsUpdate) {
+      [s] = await db.update(settings).set(updatePayload).where(eq(settings.id, s.id)).returning();
+    }
 
     // Reset daily counters if needed
-    settings = await resetDailyCountersIfNeeded(settings);
+    s = await resetDailyCountersIfNeeded(s);
 
-    // Development mode check (for testing)
+    // Development mode check
     const isDevelopment = process.env.NODE_ENV === 'development' ||
       req.headers.get('x-development-mode') === 'true';
 
     console.log('Cron job started - Settings check:', {
-      automationEnabled: settings.automationEnabled,
-      emailAutomationEnabled: settings.emailAutomationEnabled,
-      whatsappAutomationEnabled: settings.whatsappAutomationEnabled,
-      emailSchedule: settings.emailSchedule,
-      whatsappSchedule: settings.whatsappSchedule,
-      emailsSentToday: settings.emailsSentToday,
-      whatsappSentToday: settings.whatsappSentToday,
-      maxDailyEmails: settings.maxDailyEmails,
-      maxDailyWhatsapp: settings.maxDailyWhatsapp,
+      automationEnabled: s.automationEnabled,
+      emailAutomationEnabled: s.emailAutomationEnabled,
+      whatsappAutomationEnabled: s.whatsappAutomationEnabled,
+      emailSchedule: s.emailSchedule,
+      whatsappSchedule: s.whatsappSchedule,
+      emailsSentToday: s.emailsSentToday,
+      whatsappSentToday: s.whatsappSentToday,
+      maxDailyEmails: s.maxDailyEmails,
+      maxDailyWhatsapp: s.maxDailyWhatsapp,
       isDevelopment
     });
 
-    // Check if automation is enabled
-    if (!settings.automationEnabled) {
+    if (!s.automationEnabled) {
       console.log('Automation is disabled - skipping cron job');
       return NextResponse.json({
         message: 'Automation disabled',
@@ -207,8 +212,7 @@ export async function GET(req: Request) {
       });
     }
 
-    // Check if today should be skipped
-    if (shouldSkipToday(settings)) {
+    if (shouldSkipToday(s)) {
       console.log('Skipping today due to settings (weekend/holiday)');
       return NextResponse.json({
         message: 'Day skipped due to settings',
@@ -216,72 +220,45 @@ export async function GET(req: Request) {
       });
     }
 
-    // Check if it's time to send emails
-    const shouldSendEmails = settings.emailAutomationEnabled &&
-      isTimeToSend(settings.emailSchedule, settings.timezone, isDevelopment) &&
-      settings.emailsSentToday < settings.maxDailyEmails;
+    const shouldSendEmails = s.emailAutomationEnabled &&
+      isTimeToSend(s.emailSchedule as string[], s.timezone || undefined, isDevelopment) &&
+      (s.emailsSentToday ?? 0) < (s.maxDailyEmails ?? 1);
 
-    // Check if it's time to send WhatsApp messages
-    const shouldSendWhatsApp = settings.whatsappAutomationEnabled &&
-      isTimeToSend(settings.whatsappSchedule, settings.timezone, isDevelopment) &&
-      settings.whatsappSentToday < settings.maxDailyWhatsapp;
+    const shouldSendWhatsApp = s.whatsappAutomationEnabled &&
+      isTimeToSend(s.whatsappSchedule as string[], s.timezone || undefined, isDevelopment) &&
+      (s.whatsappSentToday ?? 0) < (s.maxDailyWhatsapp ?? 1);
 
-    console.log('Timing check:', {
-      shouldSendEmails,
-      shouldSendWhatsApp,
-      currentTime: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }),
-      emailSchedule: settings.emailSchedule,
-      whatsappSchedule: settings.whatsappSchedule,
-      emailsSentToday: settings.emailsSentToday,
-      whatsappSentToday: settings.whatsappSentToday,
-      maxDailyEmails: settings.maxDailyEmails,
-      maxDailyWhatsapp: settings.maxDailyWhatsapp
-    });
-
-    // If neither should be sent, exit early
     if (!shouldSendEmails && !shouldSendWhatsApp) {
       return NextResponse.json({
         message: 'Not time to send messages or daily limits reached',
         shouldSendEmails,
         shouldSendWhatsApp,
-        currentTime: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        emailSchedule: settings.emailSchedule,
-        whatsappSchedule: settings.whatsappSchedule
+        currentTime: new Date().toLocaleTimeString('en-IN', { timeZone: s.timezone || 'Asia/Kolkata' }),
+        emailSchedule: s.emailSchedule,
+        whatsappSchedule: s.whatsappSchedule
       });
     }
 
     // Get active templates
-    const whatsappTemplate = await MessageTemplate.findOne({
-      type: 'whatsapp_roast',
-      isActive: true
-    });
-    const emailTemplate = await MessageTemplate.findOne({
-      type: 'email_roast',
-      isActive: true
-    });
+    const [whatsappTemplate] = await db.select().from(messageTemplates).where(and(eq(messageTemplates.type, 'whatsapp_roast'), eq(messageTemplates.isActive, true))).limit(1);
+    const [emailTemplate] = await db.select().from(messageTemplates).where(and(eq(messageTemplates.type, 'email_roast'), eq(messageTemplates.isActive, true))).limit(1);
 
-    console.log('Templates loaded:', {
-      whatsappTemplate: !!whatsappTemplate,
-      emailTemplate: !!emailTemplate
-    });
-
-    // Exclude admin accounts from cron job
-    const adminEmails = ['admin@dsagrinders.com'];
-    const users = await User.find({
-      email: { $nin: adminEmails }
-    });
+    // Exclude admin accounts and pending profiles
+    const allUsers = await db.select().from(users).where(
+      and(
+        ne(users.role, 'admin'),
+        notLike(users.leetcodeUsername, 'pending_%')
+      )
+    );
 
     const results = [];
     let emailsSentCount = 0;
     let whatsappSentCount = 0;
 
-    // For manual sends, these are usually custom messages
     const batchRoast = '';
     const batchInsult = '';
 
-    console.log(`Processing ${users.length} users - Batch roast: ${batchRoast.substring(0, 50)}...`);
-
-    for (const user of users) {
+    for (const user of allUsers) {
       const userResult: any = {
         username: user.leetcodeUsername,
         email: user.email,
@@ -291,31 +268,19 @@ export async function GET(req: Request) {
         whatsappSent: { success: false, skipped: false }
       };
 
-      // Update LeetCode stats (always do this)
       try {
-        await updateDailyStatsForUser(user._id, user.leetcodeUsername);
+        await updateDailyStatsForUser(user.id, user.leetcodeUsername);
         userResult.statsUpdate = { success: true };
       } catch (error: any) {
         userResult.statsUpdate = { success: false, error: error.message };
       }
 
-      // Send email reminder if it's time and under limit
-      if (shouldSendEmails && emailsSentCount < settings.maxDailyEmails) {
+      if (shouldSendEmails && emailsSentCount + (s.emailsSentToday ?? 0) < (s.maxDailyEmails ?? 1)) {
         try {
           if (emailTemplate) {
             const emailResult = await sendTemplatedEmail(user, emailTemplate, batchRoast, batchInsult);
             userResult.emailSent = emailResult;
-            if (emailResult.success) {
-              emailsSentCount++;
-            }
-          } else {
-            // Fallback to original email function if no template
-            const { sendDSAReminder } = await import('@/lib/email');
-            const emailResult = await sendDSAReminder(user.email, user.name);
-            userResult.emailSent = emailResult;
-            if (emailResult.success) {
-              emailsSentCount++;
-            }
+            if (emailResult.success) emailsSentCount++;
           }
         } catch (error: any) {
           userResult.emailSent = { success: false, error: error.message };
@@ -324,83 +289,46 @@ export async function GET(req: Request) {
         userResult.emailSent = { success: false, skipped: true, reason: 'Not time or limit reached' };
       }
 
-      // Send WhatsApp reminder if it's time, under limit, and user has phone number
-      if (shouldSendWhatsApp && whatsappSentCount < settings.maxDailyWhatsapp && user.phoneNumber) {
+      if (shouldSendWhatsApp && whatsappSentCount + (s.whatsappSentToday ?? 0) < (s.maxDailyWhatsapp ?? 1) && user.phoneNumber) {
         try {
           if (whatsappTemplate) {
             const whatsappResult = await sendTemplatedWhatsApp(user, whatsappTemplate, batchRoast, batchInsult);
             userResult.whatsappSent = whatsappResult;
-            if (whatsappResult.success) {
-              whatsappSentCount++;
-            }
-          } else {
-            // Fallback to original WhatsApp function if no template
-            const { sendDSAWhatsAppReminder } = await import('@/lib/whatsapp');
-            const whatsappResult = await sendDSAWhatsAppReminder(user.phoneNumber, user.name);
-            userResult.whatsappSent = whatsappResult;
-            if (whatsappResult.success) {
-              whatsappSentCount++;
-            }
+            if (whatsappResult.success) whatsappSentCount++;
           }
         } catch (error: any) {
           userResult.whatsappSent = { success: false, error: error.message };
         }
       } else {
-        const reason = !shouldSendWhatsApp ? 'Not time or limit reached' :
-          !user.phoneNumber ? 'No phone number' : 'Unknown';
+        const reason = !shouldSendWhatsApp ? 'Not time or limit reached' : !user.phoneNumber ? 'No phone number' : 'Limit reached';
         userResult.whatsappSent = { success: false, skipped: true, reason };
       }
 
       results.push(userResult);
-
-      // Small delay to avoid overwhelming the APIs
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     // Update settings with new counts
-    settings.emailsSentToday += emailsSentCount;
-    settings.whatsappSentToday += whatsappSentCount;
-    if (emailsSentCount > 0) settings.lastEmailSent = new Date();
-    if (whatsappSentCount > 0) settings.lastWhatsappSent = new Date();
-    await settings.save();
+    await db.update(settings).set({
+      emailsSentToday: (s.emailsSentToday ?? 0) + emailsSentCount,
+      whatsappSentToday: (s.whatsappSentToday ?? 0) + whatsappSentCount,
+      lastEmailSent: emailsSentCount > 0 ? new Date() : s.lastEmailSent,
+      lastWhatsappSent: whatsappSentCount > 0 ? new Date() : s.lastWhatsappSent,
+    }).where(eq(settings.id, s.id));
 
-    // Calculate summary
     const summary = {
-      totalUsers: users.length,
+      totalUsers: allUsers.length,
       statsUpdated: results.filter(r => r.statsUpdate.success).length,
       emailsSent: emailsSentCount,
       whatsappSent: whatsappSentCount,
       emailsSkipped: results.filter(r => r.emailSent.skipped).length,
       whatsappSkipped: results.filter(r => r.whatsappSent.skipped).length,
-      dailyTotals: {
-        emailsSentToday: settings.emailsSentToday,
-        whatsappSentToday: settings.whatsappSentToday,
-        maxDailyEmails: settings.maxDailyEmails,
-        maxDailyWhatsapp: settings.maxDailyWhatsapp
-      },
-      usedTemplates: {
-        whatsapp: !!whatsappTemplate,
-        email: !!emailTemplate
-      }
     };
-
-    console.log('Cron job completed:', summary);
 
     return NextResponse.json({
       message: 'Cron job completed successfully',
       summary,
-      settings: {
-        automationEnabled: settings.automationEnabled,
-        emailAutomationEnabled: settings.emailAutomationEnabled,
-        whatsappAutomationEnabled: settings.whatsappAutomationEnabled,
-        emailSchedule: settings.emailSchedule,
-        whatsappSchedule: settings.whatsappSchedule
-      },
-      templatesUsed: {
-        whatsapp: whatsappTemplate?.name || 'fallback',
-        email: emailTemplate?.name || 'fallback'
-      },
-      results: results.slice(0, 5) // Only return first 5 results to avoid large response
+      results: results.slice(0, 5)
     });
   } catch (error: any) {
     console.error('Cron job error:', error);

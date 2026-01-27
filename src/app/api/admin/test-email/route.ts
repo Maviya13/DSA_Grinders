@@ -4,11 +4,7 @@ import nodemailer from 'nodemailer';
 
 // Simple admin check
 function isAdmin(user: any): boolean {
-  const adminEmails = [
-    'admin@dsagrinders.com',
-  ];
-  
-  return adminEmails.includes(user.email.toLowerCase());
+  return user.role === 'admin';
 }
 
 export const POST = requireAuth(async (req, user) => {
@@ -64,7 +60,7 @@ export const POST = requireAuth(async (req, user) => {
     }
 
     const testMessage = {
-      from: `"DSA Grinders Test" <admin@dsagrinders.com>`,
+      from: `"DSA Grinders Test" <${process.env.SMTP_EMAIL}>`,
       to: email,
       subject: `Test Email - ${new Date().toLocaleString()}`,
       html: `
@@ -88,7 +84,7 @@ export const POST = requireAuth(async (req, user) => {
     console.log('From:', process.env.SMTP_EMAIL);
 
     const info = await transporter.sendMail(testMessage);
-    
+
     console.log('✅ Test email sent successfully:', info.messageId);
     console.log('Email info:', {
       messageId: info.messageId,
@@ -113,7 +109,7 @@ export const POST = requireAuth(async (req, user) => {
 
   } catch (error: any) {
     console.error('❌ Test email error:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error.message,
       stack: error.stack,
       envCheck: {

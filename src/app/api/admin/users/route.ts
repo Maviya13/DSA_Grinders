@@ -1,32 +1,31 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { User } from '@/models/User';
+import { db } from '@/db/drizzle';
+import { users } from '@/db/schema';
+import { desc } from 'drizzle-orm';
 
 export const GET = requireAdmin(async (req, user) => {
   try {
-    await dbConnect();
-
     // Get all users without passwords
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    const allUsers = await db.select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      leetcodeUsername: users.leetcodeUsername,
+      phoneNumber: users.phoneNumber,
+      role: users.role,
+      createdAt: users.createdAt,
+    }).from(users).orderBy(desc(users.createdAt));
 
     const userStats = {
-      total: users.length,
-      withWhatsApp: users.filter(u => u.phoneNumber).length,
-      withoutWhatsApp: users.filter(u => !u.phoneNumber).length,
-      admins: users.filter(u => u.role === 'admin' || u.email.includes('admin')).length,
+      total: allUsers.length,
+      withWhatsApp: allUsers.filter(u => u.phoneNumber).length,
+      withoutWhatsApp: allUsers.filter(u => !u.phoneNumber).length,
+      admins: allUsers.filter(u => u.role === 'admin' || u.email.includes('admin')).length,
     };
 
     return NextResponse.json({
-      users: users.map(user => ({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        leetcodeUsername: user.leetcodeUsername,
-        phoneNumber: user.phoneNumber,
-        role: user.role || 'user',
-        createdAt: user.createdAt,
-      })),
+      users: allUsers,
       stats: userStats,
     });
   } catch (error: any) {

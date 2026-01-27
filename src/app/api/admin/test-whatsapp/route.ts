@@ -4,12 +4,7 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
 // Simple admin check
 function isAdmin(user: any): boolean {
-  const adminEmails = [
-    'admin@dsagrinders.com',
-  ];
-  
-  return adminEmails.includes(user.email.toLowerCase()) || 
-         user.email.toLowerCase().includes('admin');
+  return user.role === 'admin';
 }
 
 export const POST = requireAuth(async (req, user) => {

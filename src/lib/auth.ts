@@ -1,37 +1,56 @@
 import { NextRequest } from 'next/server';
-import { getTokenFromHeader, verifyToken, JWTPayload } from './jwt';
-import dbConnect from './mongodb';
-import { User, IUser } from '@/models/User';
+import { db } from '@/db/drizzle';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { supabase } from './supabase';
+import jwt from 'jsonwebtoken';
+
+const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'fallback_secret_key';
 
 export async function getCurrentUser(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
-    const token = getTokenFromHeader(authHeader);
-
-    if (!token) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return null;
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
+    const token = authHeader.split(' ')[1];
+
+    try {
+        // 1. Try manual admin token first
+        try {
+            const decoded = jwt.verify(token, ADMIN_SESSION_SECRET) as any;
+            if (decoded && decoded.role === 'admin' && decoded.manual) {
+                return { id: 'manual_admin', name: 'Manual Admin', role: 'admin', isProfileIncomplete: false };
+            }
+        } catch (e) {
+            // Not a manual token, continue to Supabase
+        }
+
+        // 2. Try Supabase token
+        const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
+        if (error || !supabaseUser) return null;
+
+        const email = supabaseUser.email?.toLowerCase();
+        if (!email) return null;
+
+        const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+        if (!user) return null;
+
+        // Verify profile is complete for regular routes
+        const isProfileIncomplete =
+            !user.leetcodeUsername ||
+            user.leetcodeUsername.startsWith('pending_') ||
+            !user.github ||
+            user.github === 'pending' ||
+            !user.phoneNumber ||
+            !user.linkedin;
+
+        return { ...user, isProfileIncomplete };
+    } catch (error) {
+        console.error('Auth error:', error);
         return null;
     }
-
-    await dbConnect();
-    const user = await User.findById(payload.userId).select('-password');
-    return user;
-}
-
-// Checks admin password from environment variables - no hardcoding!
-export function verifyAdminCredentials(adminId: string, adminPassword: string): boolean {
-    const envAdminId = process.env.ADMIN_ID;
-    const envAdminPassword = process.env.ADMIN_PASSWORD;
-
-    if (!envAdminId || !envAdminPassword) {
-        console.error('ADMIN_ID or ADMIN_PASSWORD not set in environment variables');
-        return false;
-    }
-
-    return adminId === envAdminId && adminPassword === envAdminPassword;
 }
 
 export function requireAuth(handler: (req: NextRequest, user: any, context?: any) => Promise<Response>) {
@@ -43,35 +62,32 @@ export function requireAuth(handler: (req: NextRequest, user: any, context?: any
                 headers: { 'Content-Type': 'application/json' }
             });
         }
-        return handler(req, user, context);
-    };
-}
 
-// Admin auth middleware - checks for admin session token
-export function requireAdmin(handler: (req: NextRequest, user: any) => Promise<Response>) {
-    return async (req: NextRequest) => {
-        // Check for admin session token in cookies or Authorization header
-        const adminToken = req.cookies.get('admin_session')?.value ||
-            req.headers.get('X-Admin-Token');
-
-        const expectedToken = process.env.ADMIN_SESSION_SECRET;
-
-        if (!expectedToken) {
-            console.error('ADMIN_SESSION_SECRET not set in environment variables');
-            return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        if (!adminToken || adminToken !== expectedToken) {
-            return new Response(JSON.stringify({ error: 'Admin access denied. Please login via /admin' }), {
+        // Block actions if profile is incomplete (except for profile update route)
+        const isProfileUpdate = req.nextUrl.pathname === '/api/users/profile';
+        if (user.isProfileIncomplete && !isProfileUpdate) {
+            return new Response(JSON.stringify({ error: 'Profile completion required', isProfileIncomplete: true }), {
                 status: 403,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        // Admin is authenticated, proceed without needing a user object
-        return handler(req, { isAdmin: true });
+        return handler(req, user, context);
+    };
+}
+
+// Admin auth middleware - checks for admin role in database
+export function requireAdmin(handler: (req: NextRequest, user: any) => Promise<Response>) {
+    return async (req: NextRequest) => {
+        const user = await getCurrentUser(req);
+
+        if (!user || user.role !== 'admin') {
+            return new Response(JSON.stringify({ error: 'Admin access denied' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        return handler(req, user);
     };
 }

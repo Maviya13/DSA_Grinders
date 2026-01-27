@@ -28,26 +28,26 @@ export default function SplashScreen() {
   if (!isVisible) return null
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center animate-out fade-out duration-300">
+    <div className="fixed inset-0 z-9999 bg-white flex flex-col items-center justify-center animate-out fade-out duration-300">
       <div className="relative w-32 h-32 mb-6 animate-in zoom-in duration-500">
-        <Image 
-          src="/logo.png" 
-          alt="DSA Grinders" 
-          width={128} 
-          height={128} 
+        <Image
+          src="/logo.png"
+          alt="DSA Grinders"
+          width={128}
+          height={128}
           className="object-contain"
           priority
         />
       </div>
-      
+
       <h1 className="text-2xl font-semibold text-gray-900 mb-2 animate-in slide-in-from-bottom-4 duration-700">
         DSA Grinders
       </h1>
-      
+
       <p className="text-sm text-gray-500 animate-in slide-in-from-bottom-4 duration-700 delay-100">
         Grind LeetCode Together
       </p>
-      
+
       {/* Loading indicator */}
       <div className="mt-8 flex gap-1.5">
         <div className="w-2 h-2 rounded-full bg-[#1a73e8] animate-bounce" style={{ animationDelay: '0ms' }}></div>

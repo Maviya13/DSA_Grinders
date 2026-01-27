@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { Group } from '@/models/Group';
-import { User } from '@/models/User';
+import { db } from '@/db/drizzle';
+import { groups, groupMembers } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export const POST = requireAuth(async (req: NextRequest, user: any) => {
     try {
@@ -12,27 +12,27 @@ export const POST = requireAuth(async (req: NextRequest, user: any) => {
             return NextResponse.json({ error: 'Group code is required' }, { status: 400 });
         }
 
-        await dbConnect();
-
-        // Find group by code (case insensitive)
-        const group = await Group.findOne({ code: code.toUpperCase() });
+        // Find group by code
+        const [group] = await db.select().from(groups).where(eq(groups.code, code.toUpperCase())).limit(1);
 
         if (!group) {
             return NextResponse.json({ error: 'Invalid group code' }, { status: 404 });
         }
 
         // Check if already a member
-        if (group.members.some((memberId: any) => memberId.toString() === user._id.toString())) {
+        const [existingMember] = await db.select()
+            .from(groupMembers)
+            .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, user.id)))
+            .limit(1);
+
+        if (existingMember) {
             return NextResponse.json({ error: 'You are already a member of this group' }, { status: 400 });
         }
 
         // Add user to group members
-        group.members.push(user._id);
-        await group.save();
-
-        // Add group to user's groups list
-        await User.findByIdAndUpdate(user._id, {
-            $addToSet: { groups: group._id }
+        await db.insert(groupMembers).values({
+            groupId: group.id,
+            userId: user.id,
         });
 
         return NextResponse.json({

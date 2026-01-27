@@ -1,53 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { Group } from '@/models/Group';
-import { User } from '@/models/User';
-import { DailyStat } from '@/models/DailyStat';
+import { db } from '@/db/drizzle';
+import { groups, groupMembers, users, dailyStats } from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 export const GET = requireAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
     try {
-        const { id: groupId } = await params;
-        await dbConnect();
+        const { id: groupIdStr } = await params;
+        const groupId = parseInt(groupIdStr);
+
+        if (isNaN(groupId)) {
+            return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
+        }
 
         // Verify group exists
-        const group = await Group.findById(groupId);
+        const [group] = await db.select().from(groups).where(eq(groups.id, groupId)).limit(1);
         if (!group) {
             return NextResponse.json({ error: 'Group not found' }, { status: 404 });
         }
 
         // Verify user is a member
-        const isMember = group.members.some((memberId: any) => memberId.toString() === user._id.toString());
+        const [isMember] = await db.select().from(groupMembers).where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, user.id))).limit(1);
         if (!isMember) {
             return NextResponse.json({ error: 'You are not a member of this group' }, { status: 403 });
         }
 
         // Get members
-        const members = await User.find({ _id: { $in: group.members } }).select('-password');
+        const members = await db.select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            leetcodeUsername: users.leetcodeUsername,
+            github: users.github,
+            linkedin: users.linkedin,
+        })
+            .from(users)
+            .innerJoin(groupMembers, eq(groupMembers.userId, users.id))
+            .where(eq(groupMembers.groupId, groupId));
 
         const today = new Date().toISOString().split('T')[0];
 
-        // Build leaderboard logic (similar to global but filtered)
         const leaderboard = [];
         for (const member of members) {
             // Get today's stat
-            const todayStat = await DailyStat.findOne({ userId: member._id, date: today });
-            // Get latest stat for total problems
-            const latestStat = await DailyStat.findOne({ userId: member._id }).sort({ date: -1 });
+            const [todayStat] = await db.select()
+                .from(dailyStats)
+                .where(and(eq(dailyStats.userId, member.id), eq(dailyStats.date, today)))
+                .limit(1);
 
-            const totalScore = (latestStat?.easy || 0) * 1 + (latestStat?.medium || 0) * 3 + (latestStat?.hard || 0) * 6;
+            // Get latest stat for other data points
+            const [latestStat] = await db.select()
+                .from(dailyStats)
+                .where(eq(dailyStats.userId, member.id))
+                .orderBy(desc(dailyStats.date))
+                .limit(1);
+
+            const easy = latestStat?.easy ?? 0;
+            const medium = latestStat?.medium ?? 0;
+            const hard = latestStat?.hard ?? 0;
+            const totalScore = easy * 1 + medium * 3 + hard * 6;
 
             leaderboard.push({
-                id: member._id,
+                id: member.id,
                 name: member.name,
                 email: member.email,
                 leetcodeUsername: member.leetcodeUsername,
                 todayPoints: todayStat?.todayPoints || 0,
                 totalScore: totalScore,
                 totalProblems: latestStat?.total || 0,
-                easy: latestStat?.easy || 0,
-                medium: latestStat?.medium || 0,
-                hard: latestStat?.hard || 0,
+                easy: easy,
+                medium: medium,
+                hard: hard,
                 ranking: latestStat?.ranking || 0,
                 avatar: latestStat?.avatar || '',
                 country: latestStat?.country || '',

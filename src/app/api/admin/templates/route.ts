@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { MessageTemplate } from '@/models/MessageTemplate';
+import { db } from '@/db/drizzle';
+import { messageTemplates } from '@/db/schema';
+import { eq, asc } from 'drizzle-orm';
 
 // Default templates
 const defaultTemplates = [
@@ -9,32 +10,22 @@ const defaultTemplates = [
     type: 'whatsapp_roast',
     name: 'Daily Roast',
     content: `🔥 *WAKE UP CALL FOR {userName}* 🔥
-
-*REALITY CHECK:*
+\n*REALITY CHECK:*
 {roast}
-
-*HARSH TRUTH:* {insult}
-
-Listen up *{userName}*! 👂
-
-While you're scrolling through WhatsApp, your competition is grinding LeetCode problems and getting closer to their dream jobs! 💼
-
-⏰ *STOP MAKING EXCUSES!*
+\n*HARSH TRUTH:* {insult}
+\nListen up *{userName}*! 👂
+\nWhile you're scrolling through WhatsApp, your competition is grinding LeetCode problems and getting closer to their dream jobs! 💼
+\n⏰ *STOP MAKING EXCUSES!*
 ⏰ *STOP PROCRASTINATING!*
 ⏰ *START CODING NOW!*
-
-🎯 *TODAY'S MISSION:*
+\n🎯 *TODAY'S MISSION:*
 • Solve at least 2 problems
 • Focus on Medium difficulty
 • Stop checking social media every 5 minutes!
-
-🚀 *GET TO WORK:* https://leetcode.com/problemset/
-
-*REMEMBER:* Every minute you waste is a minute your competition gets ahead! 
-
-*NO EXCUSES. NO SHORTCUTS. JUST GRIND!* 💪
-
----
+\n🚀 *GET TO WORK:* https://leetcode.com/problemset/
+\n*REMEMBER:* Every minute you waste is a minute your competition gets ahead! 
+\n*NO EXCUSES. NO SHORTCUTS. JUST GRIND!* 💪
+\n---
 DSA Grinders - Where weak coders become strong! 💀`,
     variables: ['userName', 'roast', 'insult'],
     isActive: true
@@ -92,27 +83,18 @@ DSA Grinders - Where weak coders become strong! 💀`,
 
 export const GET = requireAdmin(async (req, user) => {
   try {
-    await dbConnect();
-
     // Get all templates
-    let templates = await MessageTemplate.find({}).sort({ type: 1, name: 1 });
+    let templates = await db.select().from(messageTemplates).orderBy(asc(messageTemplates.type), asc(messageTemplates.name));
 
     // If no templates exist, create default ones
     if (templates.length === 0) {
-      templates = await MessageTemplate.insertMany(defaultTemplates);
+      templates = await db.insert(messageTemplates).values(defaultTemplates).returning();
     }
 
     return NextResponse.json({
       templates: templates.map(template => ({
-        id: template._id,
-        type: template.type,
-        name: template.name,
-        subject: template.subject,
-        content: template.content,
-        variables: template.variables,
-        isActive: template.isActive,
-        createdAt: template.createdAt,
-        updatedAt: template.updatedAt,
+        ...template,
+        id: template.id,
       })),
     });
   } catch (error: any) {
@@ -126,33 +108,23 @@ export const POST = requireAdmin(async (req, user) => {
     const { type, name, subject, content, variables } = await req.json();
 
     if (!type || !name || !content) {
-      return NextResponse.json(
-        { error: 'Type, name, and content are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Type, name, and content are required' }, { status: 400 });
     }
 
-    await dbConnect();
-
-    const template = await MessageTemplate.create({
+    const [template] = await db.insert(messageTemplates).values({
       type,
       name,
       subject,
       content,
       variables: variables || [],
       isActive: true,
-    });
+    }).returning();
 
     return NextResponse.json({
       success: true,
       template: {
-        id: template._id,
-        type: template.type,
-        name: template.name,
-        subject: template.subject,
-        content: template.content,
-        variables: template.variables,
-        isActive: template.isActive,
+        ...template,
+        id: template.id,
       },
     });
   } catch (error: any) {
@@ -166,17 +138,11 @@ export const PUT = requireAdmin(async (req, user) => {
     const { id, type, name, subject, content, variables, isActive } = await req.json();
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'Template ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Template ID is required' }, { status: 400 });
     }
 
-    await dbConnect();
-
-    const template = await MessageTemplate.findByIdAndUpdate(
-      id,
-      {
+    const [template] = await db.update(messageTemplates)
+      .set({
         type,
         name,
         subject,
@@ -184,27 +150,19 @@ export const PUT = requireAdmin(async (req, user) => {
         variables: variables || [],
         isActive: isActive !== undefined ? isActive : true,
         updatedAt: new Date(),
-      },
-      { new: true }
-    );
+      })
+      .where(eq(messageTemplates.id, id))
+      .returning();
 
     if (!template) {
-      return NextResponse.json(
-        { error: 'Template not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
     return NextResponse.json({
       success: true,
       template: {
-        id: template._id,
-        type: template.type,
-        name: template.name,
-        subject: template.subject,
-        content: template.content,
-        variables: template.variables,
-        isActive: template.isActive,
+        ...template,
+        id: template.id,
       },
     });
   } catch (error: any) {

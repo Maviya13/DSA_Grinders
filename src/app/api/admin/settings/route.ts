@@ -1,44 +1,30 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { Settings } from '@/models/Settings';
+import { db } from '@/db/drizzle';
+import { settings as settingsTable } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { OPTIMAL_SCHEDULES } from '@/lib/schedule-helper';
 
 // Get current settings
 export const GET = requireAdmin(async (req, user) => {
   try {
-    await dbConnect();
-
-    // Get or create settings
-    let settings = await Settings.findOne({});
+    let [settings] = await db.select().from(settingsTable).limit(1);
 
     if (!settings) {
-      // Create default settings if none exist
-      settings = new Settings({});
-      await settings.save();
+      [settings] = await db.insert(settingsTable).values({}).returning();
       console.log('Created default settings');
     }
+
+    // Bridging old fields for frontend compatibility if needed
+    const emailSchedule = settings.emailSchedule as string[] || ['09:00'];
+    const whatsappSchedule = settings.whatsappSchedule as string[] || ['09:30'];
 
     return NextResponse.json({
       success: true,
       settings: {
-        id: settings._id,
-        automationEnabled: settings.automationEnabled,
-        emailAutomationEnabled: settings.emailAutomationEnabled,
-        whatsappAutomationEnabled: settings.whatsappAutomationEnabled,
-        dailyEmailTime: settings.dailyEmailTime,
-        dailyWhatsappTime: settings.dailyWhatsappTime,
-        timezone: settings.timezone,
-        maxDailyEmails: settings.maxDailyEmails,
-        maxDailyWhatsapp: settings.maxDailyWhatsapp,
-        emailsSentToday: settings.emailsSentToday,
-        whatsappSentToday: settings.whatsappSentToday,
-        lastEmailSent: settings.lastEmailSent,
-        lastWhatsappSent: settings.lastWhatsappSent,
-        skipWeekends: settings.skipWeekends,
-        skipHolidays: settings.skipHolidays,
-        customSkipDates: settings.customSkipDates,
-        updatedAt: settings.updatedAt
+        ...settings,
+        dailyEmailTime: emailSchedule[0],
+        dailyWhatsappTime: whatsappSchedule[0],
       }
     });
 
@@ -53,117 +39,68 @@ export const PUT = requireAdmin(async (req, user) => {
   try {
     const updateData = await req.json();
 
-    await dbConnect();
-
-    // Get or create settings
-    let settings = await Settings.findOne({});
-
+    let [settings] = await db.select().from(settingsTable).limit(1);
     if (!settings) {
-      settings = new Settings({});
+      [settings] = await db.insert(settingsTable).values({}).returning();
     }
 
-    // Update fields if provided
-    if (updateData.automationEnabled !== undefined) {
-      settings.automationEnabled = updateData.automationEnabled;
-    }
-    if (updateData.emailAutomationEnabled !== undefined) {
-      settings.emailAutomationEnabled = updateData.emailAutomationEnabled;
-    }
-    if (updateData.whatsappAutomationEnabled !== undefined) {
-      settings.whatsappAutomationEnabled = updateData.whatsappAutomationEnabled;
-    }
+    const updatePayload: any = {};
+
+    if (updateData.automationEnabled !== undefined) updatePayload.automationEnabled = updateData.automationEnabled;
+    if (updateData.emailAutomationEnabled !== undefined) updatePayload.emailAutomationEnabled = updateData.emailAutomationEnabled;
+    if (updateData.whatsappAutomationEnabled !== undefined) updatePayload.whatsappAutomationEnabled = updateData.whatsappAutomationEnabled;
+
     if (updateData.dailyEmailTime) {
-      // Validate time format (HH:MM)
       if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(updateData.dailyEmailTime)) {
-        return NextResponse.json(
-          { error: 'Invalid email time format. Use HH:MM (24-hour format)' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid email time format' }, { status: 400 });
       }
-      settings.dailyEmailTime = updateData.dailyEmailTime;
+      updatePayload.emailSchedule = [updateData.dailyEmailTime];
     }
+
     if (updateData.dailyWhatsappTime) {
-      // Validate time format (HH:MM)
       if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(updateData.dailyWhatsappTime)) {
-        return NextResponse.json(
-          { error: 'Invalid WhatsApp time format. Use HH:MM (24-hour format)' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid WhatsApp time format' }, { status: 400 });
       }
-      settings.dailyWhatsappTime = updateData.dailyWhatsappTime;
+      updatePayload.whatsappSchedule = [updateData.dailyWhatsappTime];
     }
-    if (updateData.timezone) {
-      settings.timezone = updateData.timezone;
-    }
+
+    if (updateData.timezone) updatePayload.timezone = updateData.timezone;
+
     if (updateData.maxDailyEmails !== undefined) {
-      if (updateData.maxDailyEmails < 0 || updateData.maxDailyEmails > 10) {
-        return NextResponse.json(
-          { error: 'Max daily emails must be between 0 and 10' },
-          { status: 400 }
-        );
-      }
-      settings.maxDailyEmails = updateData.maxDailyEmails;
-
-      // Auto-generate optimal email schedule based on count
+      updatePayload.maxDailyEmails = updateData.maxDailyEmails;
       if (updateData.maxDailyEmails > 0 && updateData.maxDailyEmails <= 5) {
-        const optimalSchedule = OPTIMAL_SCHEDULES[updateData.maxDailyEmails as keyof typeof OPTIMAL_SCHEDULES];
-        if (optimalSchedule) {
-          settings.emailSchedule = optimalSchedule.email;
-        }
+        const optimal = OPTIMAL_SCHEDULES[updateData.maxDailyEmails as keyof typeof OPTIMAL_SCHEDULES];
+        if (optimal) updatePayload.emailSchedule = optimal.email;
       }
     }
+
     if (updateData.maxDailyWhatsapp !== undefined) {
-      if (updateData.maxDailyWhatsapp < 0 || updateData.maxDailyWhatsapp > 10) {
-        return NextResponse.json(
-          { error: 'Max daily WhatsApp messages must be between 0 and 10' },
-          { status: 400 }
-        );
-      }
-      settings.maxDailyWhatsapp = updateData.maxDailyWhatsapp;
-
-      // Auto-generate optimal WhatsApp schedule based on count
+      updatePayload.maxDailyWhatsapp = updateData.maxDailyWhatsapp;
       if (updateData.maxDailyWhatsapp > 0 && updateData.maxDailyWhatsapp <= 5) {
-        const optimalSchedule = OPTIMAL_SCHEDULES[updateData.maxDailyWhatsapp as keyof typeof OPTIMAL_SCHEDULES];
-        if (optimalSchedule) {
-          settings.whatsappSchedule = optimalSchedule.whatsapp;
-        }
+        const optimal = OPTIMAL_SCHEDULES[updateData.maxDailyWhatsapp as keyof typeof OPTIMAL_SCHEDULES];
+        if (optimal) updatePayload.whatsappSchedule = optimal.whatsapp;
       }
     }
-    if (updateData.skipWeekends !== undefined) {
-      settings.skipWeekends = updateData.skipWeekends;
-    }
-    if (updateData.skipHolidays !== undefined) {
-      settings.skipHolidays = updateData.skipHolidays;
-    }
-    if (updateData.customSkipDates) {
-      settings.customSkipDates = updateData.customSkipDates.map((date: string) => new Date(date));
-    }
 
-    await settings.save();
+    if (updateData.skipWeekends !== undefined) updatePayload.skipWeekends = updateData.skipWeekends;
+    if (updateData.skipHolidays !== undefined) updatePayload.skipHolidays = updateData.skipHolidays;
+    if (updateData.customSkipDates) updatePayload.customSkipDates = updateData.customSkipDates.map((d: string) => new Date(d));
 
-    console.log('Admin updated automation settings');
+    const [updatedSettings] = await db.update(settingsTable)
+      .set({ ...updatePayload, updatedAt: new Date() })
+      .where(eq(settingsTable.id, settings.id))
+      .returning();
+
+    const emailSchedule = updatedSettings.emailSchedule as string[] || [];
+    const whatsappSchedule = updatedSettings.whatsappSchedule as string[] || [];
 
     return NextResponse.json({
       success: true,
       message: 'Settings updated successfully',
       settings: {
-        id: settings._id,
-        automationEnabled: settings.automationEnabled,
-        emailAutomationEnabled: settings.emailAutomationEnabled,
-        whatsappAutomationEnabled: settings.whatsappAutomationEnabled,
-        dailyEmailTime: settings.dailyEmailTime,
-        dailyWhatsappTime: settings.dailyWhatsappTime,
-        timezone: settings.timezone,
-        maxDailyEmails: settings.maxDailyEmails,
-        maxDailyWhatsapp: settings.maxDailyWhatsapp,
-        emailsSentToday: settings.emailsSentToday,
-        whatsappSentToday: settings.whatsappSentToday,
-        lastEmailSent: settings.lastEmailSent,
-        lastWhatsappSent: settings.lastWhatsappSent,
-        skipWeekends: settings.skipWeekends,
-        skipHolidays: settings.skipHolidays,
-        customSkipDates: settings.customSkipDates,
-        updatedAt: settings.updatedAt
+        ...updatedSettings,
+        dailyEmailTime: emailSchedule[0] || '09:00',
+        dailyWhatsappTime: whatsappSchedule[0] || '09:30',
       }
     });
 
@@ -173,34 +110,24 @@ export const PUT = requireAdmin(async (req, user) => {
   }
 });
 
-// Reset daily counters (for testing or manual reset)
+// Reset daily counters
 export const POST = requireAdmin(async (req, user) => {
   try {
-    await dbConnect();
+    const [settings] = await db.select().from(settingsTable).limit(1);
+    if (!settings) return NextResponse.json({ error: 'Settings not found' }, { status: 404 });
 
-    const settings = await Settings.findOne({});
-
-    if (!settings) {
-      return NextResponse.json(
-        { error: 'Settings not found' },
-        { status: 404 }
-      );
-    }
-
-    // Reset daily counters
-    settings.emailsSentToday = 0;
-    settings.whatsappSentToday = 0;
-    settings.lastResetDate = new Date();
-
-    await settings.save();
-
-    console.log('Admin reset daily counters');
+    await db.update(settingsTable)
+      .set({
+        emailsSentToday: 0,
+        whatsappSentToday: 0,
+        lastResetDate: new Date(),
+      })
+      .where(eq(settingsTable.id, settings.id));
 
     return NextResponse.json({
       success: true,
       message: 'Daily counters reset successfully'
     });
-
   } catch (error: any) {
     console.error('Settings POST error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

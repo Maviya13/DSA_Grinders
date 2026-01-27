@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { User } from '@/models/User';
+import { db } from '@/db/drizzle';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { updateDailyStatsForUser } from '@/lib/leetcode';
 
 export const PUT = requireAuth(async (req: NextRequest, user: any) => {
   try {
-    const { name, phoneNumber, github, linkedin } = await req.json();
+    const { name, phoneNumber, github, linkedin, leetcodeUsername } = await req.json();
 
     // Validate phone number format if provided
     if (phoneNumber && !/^\+?[1-9]\d{1,14}$/.test(phoneNumber.replace(/\s/g, ''))) {
@@ -15,22 +17,32 @@ export const PUT = requireAuth(async (req: NextRequest, user: any) => {
       );
     }
 
-    await dbConnect();
-
     const updateData: any = {};
     if (name) updateData.name = name;
-    if (github) updateData.github = github;
-    if (linkedin !== undefined) updateData.linkedin = linkedin; // Allow empty string to remove it
+
+    // Attach links if only usernames are provided
+    if (github) {
+      updateData.github = github.startsWith('http') ? github : `https://github.com/${github.replace('@', '')}`;
+    }
+
+    if (linkedin !== undefined) {
+      if (!linkedin) {
+        updateData.linkedin = null;
+      } else {
+        updateData.linkedin = linkedin.startsWith('http') ? linkedin : `https://linkedin.com/in/${linkedin.replace('@', '')}`;
+      }
+    }
+
+    if (leetcodeUsername) updateData.leetcodeUsername = leetcodeUsername;
 
     if (phoneNumber !== undefined) {
       updateData.phoneNumber = phoneNumber ? phoneNumber.replace(/\s/g, '') : null;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      user._id,
-      updateData,
-      { new: true }
-    ).select('-password');
+    const [updatedUser] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, user.id))
+      .returning();
 
     if (!updatedUser) {
       return NextResponse.json(
@@ -39,9 +51,19 @@ export const PUT = requireAuth(async (req: NextRequest, user: any) => {
       );
     }
 
+    // Trigger immediate LeetCode sync if username was set
+    if (leetcodeUsername) {
+      try {
+        await updateDailyStatsForUser(updatedUser.id, updatedUser.leetcodeUsername);
+      } catch (syncError) {
+        console.error('Initial LeetCode sync failed:', syncError);
+        // We don't fail the whole request, but we log it
+      }
+    }
+
     return NextResponse.json({
       user: {
-        id: updatedUser._id,
+        id: updatedUser.id,
         name: updatedUser.name,
         email: updatedUser.email,
         leetcodeUsername: updatedUser.leetcodeUsername,

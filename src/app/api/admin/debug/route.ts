@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { User } from '@/models/User';
-import { MessageTemplate } from '@/models/MessageTemplate';
+import { db } from '@/db/drizzle';
+import { users as usersTable, messageTemplates } from '@/db/schema';
+import { eq, ne, notLike, and } from 'drizzle-orm';
 
 // Simple admin check
 function isAdmin(user: any): boolean {
-  const adminEmails = [
-    'admin@dsagrinders.com',
-  ];
-  
-  return adminEmails.includes(user.email.toLowerCase());
+  return user.role === 'admin';
 }
 
 export const GET = requireAuth(async (req, user) => {
@@ -23,26 +19,27 @@ export const GET = requireAuth(async (req, user) => {
       );
     }
 
-    await dbConnect();
-    
-    // Get all users (including admin for debugging)
-    const allUsers = await User.find({}).select('-password');
-    
+    // Get all users
+    const allUsers = await db.select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      leetcodeUsername: usersTable.leetcodeUsername,
+      phoneNumber: usersTable.phoneNumber,
+      role: usersTable.role,
+    }).from(usersTable);
+
     // Get non-admin users
-    const adminEmails = ['admin@dsagrinders.com'];
-    const regularUsers = await User.find({
-      email: { $nin: adminEmails }
-    }).select('-password');
+    const regularUsers = allUsers.filter(u => u.role !== 'admin');
 
     // Get templates
-    const templates = await MessageTemplate.find({});
+    const templates = await db.select().from(messageTemplates);
 
     // Environment check
     const envCheck = {
       SMTP_EMAIL: !!process.env.SMTP_EMAIL,
       SMTP_PASSWORD: !!process.env.SMTP_PASSWORD,
-      RPAY_API_KEY: !!process.env.RPAY_API_KEY,
-      MONGODB_URI: !!process.env.MONGODB_URI,
+      DATABASE_URL: !!process.env.DATABASE_URL,
     };
 
     return NextResponse.json({
@@ -62,7 +59,7 @@ export const GET = requireAuth(async (req, user) => {
         phonePreview: u.phoneNumber ? u.phoneNumber.substring(0, 5) + '***' : null
       })),
       templates: templates.map(t => ({
-        id: t._id,
+        id: t.id,
         type: t.type,
         name: t.name,
         isActive: t.isActive,

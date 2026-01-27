@@ -8,7 +8,7 @@ import { MorphingText } from '@/components/ui/morphing-text'
 import { Particles } from '@/components/ui/particles'
 
 export default function Home() {
-  const { user } = useAuth()
+  const { user, signInWithGoogle, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -22,10 +22,10 @@ export default function Home() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-white">
       {/* Particle Background */}
-      <Particles 
-        className="fixed inset-0" 
-        quantity={300} 
-        color="#4285F4" 
+      <Particles
+        className="fixed inset-0"
+        quantity={300}
+        color="#4285F4"
         size={1.2}
         staticity={40}
         ease={40}
@@ -39,18 +39,19 @@ export default function Home() {
           </div>
           <span className="text-lg font-medium text-gray-900">DSA Grinders</span>
         </div>
-        <a 
-          href="/login"
-          className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-full transition-colors"
+        <button
+          onClick={() => signInWithGoogle()}
+          className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+          disabled={isLoading}
         >
-          Sign in
-        </a>
+          {isLoading ? '...' : 'Sign in'}
+        </button>
       </nav>
 
       {/* Hero - Centered */}
       <main className="relative z-10 flex flex-col items-center justify-center h-[calc(100vh-88px)] px-6 -mt-16">
         <div className="max-w-3xl mx-auto text-center">
-          
+
           {/* Logo */}
           <div className="relative w-36 h-36 mx-auto mb-5">
             <Image src="/logo.png" alt="DSA Grinders" width={144} height={144} className="object-contain" priority />
@@ -66,28 +67,29 @@ export default function Home() {
           <h1 className="text-headline">
             Track progress,
           </h1>
-          
+
           {/* Morphing Text */}
-          <MorphingText 
-            texts={["together", "daily", "smarter", "faster"]} 
-            className="h-16 md:h-20 text-[#9AA0A6] font-normal"
+          <MorphingText
+            texts={["together", "daily", "smarter", "faster"]}
+            className="h-16 md:h-20 text-gray-400 font-normal"
           />
 
           {/* Subheadline */}
-          <p className="text-body max-w-lg mx-auto mt-8 mb-10">
-            A simple way to stay consistent with your DSA practice. 
+          <p className="text-lg text-gray-600 max-w-lg mx-auto mt-8 mb-10">
+            A simple way to stay consistent with your DSA practice.
             Connect your LeetCode, compete with friends.
           </p>
 
           {/* CTA - EMPHASIS with Google Blue */}
           <div className="flex items-center justify-center gap-4">
-            <a 
-              href="/login"
-              className="interactive-primary px-8 py-3.5 text-base font-medium rounded-full"
+            <button
+              onClick={() => signInWithGoogle()}
+              className="px-8 py-3.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-base font-medium rounded-full transition-colors disabled:opacity-50"
+              disabled={isLoading}
             >
-              Get started
-            </a>
-            <span className="text-sm text-[#9AA0A6]">Free forever</span>
+              {isLoading ? 'Connecting...' : 'Get started'}
+            </button>
+            <span className="text-sm text-gray-500">Free forever</span>
           </div>
 
         </div>

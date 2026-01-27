@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { User } from '@/models/User';
+import { db } from '@/db/drizzle';
+import { users as usersTable } from '@/db/schema';
+import { inArray } from 'drizzle-orm';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import nodemailer from 'nodemailer';
 
@@ -37,8 +38,7 @@ async function sendCustomEmail(toEmail: string, userName: string, subject: strin
         <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
           <p style="color: #e0e0e0; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">
             Hey <strong style="color: #00d4ff;">${userName}</strong>!
-
-${message}
+\n${message}
           </p>
         </div>
         
@@ -59,12 +59,10 @@ ${message}
   };
 
   try {
-    console.log(`Sending custom email to: ${toEmail}`);
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully to ${toEmail}`);
     return { success: true, info };
   } catch (error: any) {
-    console.error(`❌ Email send error for ${toEmail}:`, error);
+    console.error(`Email send error for ${toEmail}:`, error);
     return { success: false, error: error.message };
   }
 }
@@ -80,29 +78,19 @@ export const POST = requireAdmin(async (req, user) => {
     } = await req.json();
 
     if (!userIds || userIds.length === 0) {
-      return NextResponse.json(
-        { error: 'No users selected' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No users selected' }, { status: 400 });
     }
-
-    if (!messageType || !['email', 'whatsapp', 'both'].includes(messageType)) {
-      return NextResponse.json(
-        { error: 'Invalid message type' },
-        { status: 400 }
-      );
-    }
-
-    await dbConnect();
 
     // Get selected users
-    const users = await User.find({ _id: { $in: userIds } }).select('-password');
+    const users = await db.select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      phoneNumber: usersTable.phoneNumber,
+    }).from(usersTable).where(inArray(usersTable.id, userIds));
 
     if (users.length === 0) {
-      return NextResponse.json(
-        { error: 'No valid users found' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No valid users found' }, { status: 400 });
     }
 
     const results = {
@@ -118,16 +106,9 @@ export const POST = requireAdmin(async (req, user) => {
       // Send email
       if (messageType === 'email' || messageType === 'both') {
         try {
-          const emailResult = await sendCustomEmail(
-            targetUser.email,
-            targetUser.name,
-            emailSubject,
-            emailMessage
-          );
-
-          if (emailResult.success) {
-            results.emailsSent++;
-          } else {
+          const emailResult = await sendCustomEmail(targetUser.email, targetUser.name, emailSubject, emailMessage);
+          if (emailResult.success) results.emailsSent++;
+          else {
             results.emailsFailed++;
             results.errors.push(`Email failed for ${targetUser.name}: ${emailResult.error}`);
           }
@@ -141,10 +122,8 @@ export const POST = requireAdmin(async (req, user) => {
       if ((messageType === 'whatsapp' || messageType === 'both') && targetUser.phoneNumber) {
         try {
           const whatsappResult = await sendWhatsAppMessage(targetUser.phoneNumber, whatsappMessage);
-
-          if (whatsappResult.success) {
-            results.whatsappSent++;
-          } else {
+          if (whatsappResult.success) results.whatsappSent++;
+          else {
             results.whatsappFailed++;
             results.errors.push(`WhatsApp failed for ${targetUser.name}: ${whatsappResult.error}`);
           }
@@ -158,17 +137,9 @@ export const POST = requireAdmin(async (req, user) => {
       }
     }
 
-    // Create summary
-    const summary = [];
-    if (results.emailsSent > 0) summary.push(`${results.emailsSent} emails sent`);
-    if (results.emailsFailed > 0) summary.push(`${results.emailsFailed} emails failed`);
-    if (results.whatsappSent > 0) summary.push(`${results.whatsappSent} WhatsApp messages sent`);
-    if (results.whatsappFailed > 0) summary.push(`${results.whatsappFailed} WhatsApp messages failed`);
-
     return NextResponse.json({
       success: true,
       results,
-      summary: summary.join(', '),
       totalUsers: users.length,
     });
 

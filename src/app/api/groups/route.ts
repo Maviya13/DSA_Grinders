@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { Group } from '@/models/Group';
-import { User } from '@/models/User';
-import mongoose from 'mongoose';
+import { db } from '@/db/drizzle';
+import { groups, groupMembers, users } from '@/db/schema';
+import { eq, or, and, desc } from 'drizzle-orm';
 
 // Generate a random 6-character alphanumeric code
 function generateGroupCode(): string {
@@ -18,13 +17,21 @@ function generateGroupCode(): string {
 // GET: List groups for the current user
 export const GET = requireAuth(async (req: NextRequest, user: any) => {
     try {
-        await dbConnect();
-
         // Fetch detailed group info for groups the user is in
-        const userGroups = await Group.find({ _id: { $in: user.groups } })
-            .select('name code description members owner createdAt')
-            .populate('owner', 'name')
-            .sort({ createdAt: -1 });
+        const userGroups = await db.select({
+            id: groups.id,
+            name: groups.name,
+            code: groups.code,
+            description: groups.description,
+            owner: groups.owner,
+            createdAt: groups.createdAt,
+            ownerName: users.name,
+        })
+            .from(groups)
+            .innerJoin(groupMembers, eq(groupMembers.groupId, groups.id))
+            .leftJoin(users, eq(groups.owner, users.id))
+            .where(eq(groupMembers.userId, user.id))
+            .orderBy(desc(groups.createdAt));
 
         return NextResponse.json({ groups: userGroups });
     } catch (error: any) {
@@ -42,8 +49,6 @@ export const POST = requireAuth(async (req: NextRequest, user: any) => {
             return NextResponse.json({ error: 'Group name is required' }, { status: 400 });
         }
 
-        await dbConnect();
-
         // Generate unique code
         let code = generateGroupCode();
         let isUnique = false;
@@ -51,7 +56,7 @@ export const POST = requireAuth(async (req: NextRequest, user: any) => {
 
         // Retry loop to ensure uniqueness
         while (!isUnique && attempts < 10) {
-            const existing = await Group.findOne({ code });
+            const [existing] = await db.select().from(groups).where(eq(groups.code, code)).limit(1);
             if (!existing) {
                 isUnique = true;
             } else {
@@ -65,21 +70,21 @@ export const POST = requireAuth(async (req: NextRequest, user: any) => {
         }
 
         // Create group
-        const group = await Group.create({
+        const [newGroup] = await db.insert(groups).values({
             name,
             code,
             description,
-            owner: user._id,
-            members: [user._id],
-        });
+            owner: user.id,
+        }).returning();
 
-        // Add group to user's list
-        await User.findByIdAndUpdate(user._id, {
-            $addToSet: { groups: group._id }
+        // Add creator as group member
+        await db.insert(groupMembers).values({
+            groupId: newGroup.id,
+            userId: user.id,
         });
 
         return NextResponse.json({
-            group,
+            group: newGroup,
             message: 'Group created successfully'
         });
 

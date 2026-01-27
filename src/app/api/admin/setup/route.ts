@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { User } from '@/models/User';
+import { db } from '@/db/drizzle';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export const GET = requireAuth(async (req, user) => {
   try {
@@ -15,20 +16,21 @@ export const GET = requireAuth(async (req, user) => {
       return NextResponse.json({ error: 'Invalid secret key' }, { status: 403 });
     }
 
-    await dbConnect();
-
     // Update user role to admin
-    const updatedUser = await User.findByIdAndUpdate(
-      user._id,
-      { role: 'admin' },
-      { new: true }
-    );
+    const [updatedUser] = await db.update(users)
+      .set({ role: 'admin' })
+      .where(eq(users.id, user.id))
+      .returning();
+
+    if (!updatedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,
-      message: `User ${user.email} promoted to admin successfully!`,
+      message: `User ${updatedUser.email} promoted to admin successfully!`,
       user: {
-        id: updatedUser._id,
+        id: updatedUser.id,
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role

@@ -2,227 +2,108 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 export default function AuthPage() {
-    const { login, register } = useAuth();
-    const [isLogin, setIsLogin] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const { signInWithGoogle, isLoading: authLoading } = useAuth();
+    const [isRedirecting, setIsRedirecting] = useState(false);
 
-    // Form state
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [leetcode, setLeetcode] = useState("");
-    const [github, setGithub] = useState("");
-    const [linkedin, setLinkedin] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState("");
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setIsLoading(true);
-
+    const handleGoogleSignIn = async () => {
+        setIsRedirecting(true);
         try {
-            if (isLogin) {
-                await login(email, password);
-            } else {
-                await register(name, email, password, leetcode, github, linkedin.trim() || undefined, phoneNumber.trim() || undefined);
-            }
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
+            await signInWithGoogle();
+        } catch (error) {
+            console.error("Sign in error:", error);
+            setIsRedirecting(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 font-sans text-[#202124]">
-
-            <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-500">
-                {/* Minimal Logo */}
-                <div className="flex flex-col items-center justify-center mb-2">
-                    <div className="relative w-32 h-32 mb-0">
-                        <Image src="/logo.png" alt="DSA Grinders" width={128} height={128} className="object-contain" priority />
-                    </div>
-                    <span className="text-2xl font-normal text-gray-500 tracking-tight text-center">
-                        DSA <span className="font-medium text-gray-900">Grinders</span>
-                    </span>
-                </div>
-
-                <div className="bg-white rounded-[28px] border border-gray-200 p-6 sm:p-8 shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
-                    <h2 className="text-2xl font-normal text-center mb-2">
-                        {isLogin ? "Sign in" : "Create account"}
-                    </h2>
-                    <p className="text-center text-gray-500 mb-8 text-sm">
-                        {isLogin ? "to continue to DSA Grinders" : "to start competing with friends"}
+        <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-4 font-sans selection:bg-blue-100">
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="w-full max-w-[420px]"
+            >
+                {/* Logo Section */}
+                <div className="flex flex-col items-center justify-center mb-10 text-center">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                        className="relative w-24 h-24 mb-4"
+                    >
+                        <Image src="/logo.png" alt="DSA Grinders" width={96} height={96} className="object-contain" priority />
+                    </motion.div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                        DSA <span className="text-blue-600 font-extrabold">Grinders</span>
+                    </h1>
+                    <p className="text-gray-500 mt-2 text-sm font-medium">
+                        Log in to track your LeetCode progress and compete.
                     </p>
+                </div>
 
-                    {error && (
-                        <div className="mb-6 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm border border-red-100 flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-600 flex-shrink-0" />
-                            {error}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {!isLogin && (
-                            <div className="space-y-1.5">
-                                <Label htmlFor="name" className="text-gray-700 font-medium text-sm ml-1">Full Name</Label>
-                                <Input
-                                    id="name"
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required={!isLogin}
-                                    disabled={isLoading}
-                                    className="h-12 px-4 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl text-base"
-                                    placeholder="John Doe"
-                                />
-                            </div>
-                        )}
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="email" className="text-gray-700 font-medium text-sm ml-1">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                disabled={isLoading}
-                                className="h-12 px-4 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl text-base"
-                                placeholder="name@example.com"
-                            />
+                <div className="bg-white rounded-[32px] border border-gray-100 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                    <div className="space-y-6">
+                        <div className="text-center space-y-2">
+                            <h2 className="text-xl font-semibold text-gray-800">Welcome Back</h2>
+                            <p className="text-xs text-gray-400">Please sign in with your Google account</p>
                         </div>
 
-                        {!isLogin && (
-                            <div className="space-y-1.5">
-                                <Label htmlFor="leetcode" className="text-gray-700 font-medium text-sm ml-1">LeetCode Username</Label>
-                                <Input
-                                    id="leetcode"
-                                    type="text"
-                                    value={leetcode}
-                                    onChange={(e) => setLeetcode(e.target.value)}
-                                    required={!isLogin}
-                                    disabled={isLoading}
-                                    className="h-12 px-4 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl text-base"
-                                    placeholder="leetcode_user"
-                                />
-                            </div>
-                        )}
-
-                        {!isLogin && (
-                            <div className="space-y-1.5">
-                                <Label htmlFor="github" className="text-gray-700 font-medium text-sm ml-1">GitHub Profile URL</Label>
-                                <Input
-                                    id="github"
-                                    type="url"
-                                    value={github}
-                                    onChange={(e) => setGithub(e.target.value)}
-                                    required={!isLogin}
-                                    disabled={isLoading}
-                                    className="h-12 px-4 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl text-base"
-                                    placeholder="https://github.com/username"
-                                />
-                            </div>
-                        )}
-
-                        {!isLogin && (
-                            <div className="space-y-1.5">
-                                <Label htmlFor="linkedin" className="text-gray-700 font-medium text-sm ml-1">
-                                    LinkedIn Profile URL <span className="text-gray-400 font-normal">(Optional)</span>
-                                </Label>
-                                <Input
-                                    id="linkedin"
-                                    type="url"
-                                    value={linkedin}
-                                    onChange={(e) => setLinkedin(e.target.value)}
-                                    disabled={isLoading}
-                                    className="h-12 px-4 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl text-base"
-                                    placeholder="https://linkedin.com/in/username"
-                                />
-                            </div>
-                        )}
-
-                        {!isLogin && (
-                            <div className="space-y-1.5">
-                                <Label htmlFor="phoneNumber" className="text-gray-700 font-medium text-sm ml-1">
-                                    WhatsApp Number <span className="text-gray-400 font-normal">(Optional)</span>
-                                </Label>
-                                <Input
-                                    id="phoneNumber"
-                                    type="tel"
-                                    value={phoneNumber}
-                                    onChange={(e) => setPhoneNumber(e.target.value)}
-                                    disabled={isLoading}
-                                    className="h-12 px-4 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl text-base"
-                                    placeholder="+1234567890"
-                                />
-                                <p className="text-xs text-gray-500 ml-1">Include country code for WhatsApp reminders</p>
-                            </div>
-                        )}
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="password" className="text-gray-700 font-medium text-sm ml-1">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                minLength={6}
-                                disabled={isLoading}
-                                className="h-12 px-4 bg-gray-50 border-transparent hover:bg-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl text-base"
-                                placeholder="Min. 6 characters"
-                            />
-                        </div>
-
-                        <div className="pt-2">
-                            <Button
-                                type="submit"
-                                className="w-full h-12 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-medium rounded-full text-base shadow-none transition-all flex items-center justify-center gap-2"
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        {isLogin ? "Sign in" : "Create Account"}
-                                        <ArrowRight className="h-4 w-4" />
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </form>
-
-                    <div className="mt-8 text-center pt-6 border-t border-gray-100">
-                        <button
-                            onClick={() => {
-                                setIsLogin(!isLogin);
-                                setError(null);
-                            }}
-                            className="text-[#1a73e8] hover:text-[#1557b0] text-sm font-medium hover:underline px-2 py-1 rounded-md"
+                        <Button
+                            onClick={handleGoogleSignIn}
+                            disabled={isRedirecting || authLoading}
+                            className="w-full h-14 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-70 group"
                         >
-                            {isLogin
-                                ? "Create an account"
-                                : "Already have an account? Sign in"
-                            }
-                        </button>
+                            {isRedirecting || authLoading ? (
+                                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                            ) : (
+                                <>
+                                    <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                                        <path
+                                            fill="#4285F4"
+                                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                        />
+                                        <path
+                                            fill="#34A853"
+                                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                        />
+                                        <path
+                                            fill="#FBBC05"
+                                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                                        />
+                                        <path
+                                            fill="#EA4335"
+                                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                        />
+                                    </svg>
+                                    <span className="font-semibold text-base">Continue with Google</span>
+                                </>
+                            )}
+                        </Button>
+
+                        <div className="flex items-center gap-4 py-2">
+                            <div className="h-px bg-gray-100 flex-1"></div>
+                            <span className="text-[10px] uppercase font-bold text-gray-300 tracking-widest">Secure Login</span>
+                            <div className="h-px bg-gray-100 flex-1"></div>
+                        </div>
+
+                        <p className="text-[11px] text-gray-400 text-center px-4 leading-relaxed">
+                            By continuing, you agree to our <span className="text-gray-600 font-medium hover:underline cursor-pointer">Terms of Service</span> and <span className="text-gray-600 font-medium hover:underline cursor-pointer">Privacy Policy</span>.
+                        </p>
                     </div>
                 </div>
 
-                <div className="mt-8 flex justify-center gap-6 text-xs text-gray-400">
-                    <span className="hover:text-gray-600 cursor-pointer">Help</span>
-                    <span className="hover:text-gray-600 cursor-pointer">Privacy</span>
-                    <span className="hover:text-gray-600 cursor-pointer">Terms</span>
+                <div className="mt-12 flex justify-center gap-8 text-[11px] font-bold text-gray-300 uppercase tracking-widest">
+                    <span className="hover:text-gray-500 cursor-pointer transition-colors">Help</span>
+                    <span className="hover:text-gray-500 cursor-pointer transition-colors">Community</span>
+                    <span className="hover:text-gray-500 cursor-pointer transition-colors">Github</span>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

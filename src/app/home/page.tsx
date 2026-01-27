@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Trophy, Target, Crown, LogOut, Github, Linkedin, Users, Plus, Hash, Copy, Settings, ChevronRight } from "lucide-react";
+import { Loader2, RefreshCw, Trophy, Target, Crown, LogOut, Github, Linkedin, Users, Plus, Hash, Copy, Settings, ChevronRight, Flame, Medal } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
@@ -395,7 +396,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Leaderboard Table */}
-                <div className="bg-white rounded-3xl overflow-hidden border border-gray-200 shadow-sm">
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-sm relative">
 
 
                     {/* Group Scope Selector */}
@@ -535,15 +536,39 @@ export default function HomePage() {
                             </div>
 
                             {/* Data Rows */}
-                            <div className="divide-y divide-gray-100">
+                            <motion.div
+                                className="divide-y divide-gray-100"
+                                initial="hidden"
+                                animate="visible"
+                                variants={{
+                                    visible: { transition: { staggerChildren: 0.05 } }
+                                }}
+                            >
                                 {leaderboard.map((entry, index) => (
-                                    <div
+                                    <motion.div
                                         key={entry.id}
-                                        className={`px-8 py-4 flex items-center gap-6 transition-colors hover:bg-gray-50 ${entry.email === user.email ? 'bg-blue-50/30' : ''
+                                        variants={{
+                                            hidden: { opacity: 0, y: 10 },
+                                            visible: { opacity: 1, y: 0 }
+                                        }}
+                                        className={`px-8 py-4 flex items-center gap-6 transition-colors hover:bg-gray-50 group/profile relative ${entry.email === user.email ? 'bg-blue-50/20' : ''
                                             }`}
                                     >
+                                        {/* Rank Indicator */}
+                                        <div className="w-8 flex items-center justify-center shrink-0">
+                                            {index === 0 ? (
+                                                <Trophy className="w-5 h-5 text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]" />
+                                            ) : index === 1 ? (
+                                                <Medal className="w-5 h-5 text-gray-400" />
+                                            ) : index === 2 ? (
+                                                <Medal className="w-5 h-5 text-amber-600" />
+                                            ) : (
+                                                <span className="text-sm font-medium text-gray-400">#{index + 1}</span>
+                                            )}
+                                        </div>
+
                                         {/* Avatar */}
-                                        <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                        <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
                                             {entry.avatar ? (
                                                 <img src={entry.avatar} alt={entry.name} className="w-full h-full object-cover" />
                                             ) : (
@@ -553,7 +578,7 @@ export default function HomePage() {
                                             )}
                                         </div>
 
-                                        <div className="flex-1 min-w-0 relative group/profile">
+                                        <div className="flex-1 min-w-0 relative">
                                             <div className="flex items-center gap-2">
                                                 <a
                                                     href={`https://leetcode.com/${entry.leetcodeUsername}`}
@@ -591,6 +616,12 @@ export default function HomePage() {
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-gray-500 mt-0.5">
                                                 <span className="font-normal truncate">@{entry.leetcodeUsername}</span>
+                                                {entry.streak && entry.streak > 0 && (
+                                                    <span className="flex items-center gap-0.5 text-orange-600 font-semibold text-xs bg-orange-50 px-1.5 py-0.5 rounded-full">
+                                                        <Flame className="w-3 h-3" />
+                                                        {entry.streak}
+                                                    </span>
+                                                )}
                                                 {entry.country && (
                                                     <span className="text-xs text-gray-400">• {entry.country}</span>
                                                 )}
@@ -600,78 +631,120 @@ export default function HomePage() {
                                             </div>
 
                                             {/* Profile Hover Card */}
-                                            <div className="absolute left-0 top-full mt-2 opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-150 z-50 pointer-events-none">
-                                                <div className="bg-white rounded-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] border border-gray-100 w-64">
-                                                    <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
-                                                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                                                            {entry.avatar ? (
-                                                                <img src={entry.avatar} alt={entry.name} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-gray-500 text-lg font-semibold">
-                                                                    {entry.name.charAt(0).toUpperCase()}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="font-medium text-gray-900 truncate text-sm">{entry.name}</div>
-                                                            <div className="text-xs text-gray-500 truncate">@{entry.leetcodeUsername}</div>
-                                                        </div>
-                                                    </div>
+                                            <AnimatePresence>
+                                                <div className="absolute left-1/2 -translate-x-1/2 opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-300 z-100 pointer-events-none group-hover/profile:pointer-events-auto"
+                                                    style={{
+                                                        [index < 3 ? 'top' : 'bottom']: '100%',
+                                                        marginTop: index < 3 ? '0.5rem' : '0',
+                                                        marginBottom: index < 3 ? '0' : '0.5rem',
+                                                    }}
+                                                >
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.95, y: index < 3 ? -10 : 10 }}
+                                                        whileHover={{ scale: 1.02 }}
+                                                        animate={{
+                                                            opacity: 1,
+                                                            scale: 1,
+                                                            y: 0,
+                                                        }}
+                                                        className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/20 w-80 overflow-hidden relative"
+                                                    >
+                                                        {/* Decorative Background */}
+                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
 
-                                                    <div className="space-y-2.5 text-xs">
-                                                        {(entry.ranking && entry.ranking > 0) && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-gray-500">Global Rank</span>
-                                                                <span className="text-gray-900 font-medium">#{entry.ranking.toLocaleString()}</span>
+                                                        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-100/50 relative">
+                                                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-linear-to-br from-blue-50 to-indigo-50 shrink-0 border-2 border-white shadow-sm">
+                                                                {entry.avatar ? (
+                                                                    <img src={entry.avatar} alt={entry.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center text-blue-600 text-2xl font-bold">
+                                                                        {entry.name.charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-gray-500">Total Solved</span>
-                                                            <span className="text-gray-900 font-medium">{entry.totalProblems || 0}</span>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-bold text-gray-900 text-lg leading-tight truncate">{entry.name}</div>
+                                                                <div className="text-sm text-blue-600 font-semibold truncate hover:underline cursor-pointer">
+                                                                    <a href={`https://leetcode.com/${entry.leetcodeUsername}`} target="_blank" rel="noopener noreferrer">
+                                                                        @{entry.leetcodeUsername}
+                                                                    </a>
+                                                                </div>
+                                                                <div className="flex gap-2.5 mt-2">
+                                                                    {entry.github && (
+                                                                        <a href={entry.github} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all border border-gray-100" title="GitHub">
+                                                                            <Github className="w-4 h-4" />
+                                                                        </a>
+                                                                    )}
+                                                                    {entry.linkedin && (
+                                                                        <a href={entry.linkedin} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:text-[#0077b5] hover:bg-blue-50 transition-all border border-gray-100" title="LinkedIn">
+                                                                            <Linkedin className="w-4 h-4" />
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        {entry.streak > 0 && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-gray-500">Current Streak</span>
-                                                                <span className="text-orange-600 font-medium">🔥 {entry.streak} days</span>
-                                                            </div>
-                                                        )}
-                                                        {entry.country && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-gray-500">Location</span>
-                                                                <span className="text-gray-900 font-medium">{entry.country}</span>
-                                                            </div>
-                                                        )}
-                                                        {entry.lastSubmission && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-gray-500">Last Active</span>
-                                                                <span className="text-gray-900 font-medium">{getTimeAgo(entry.lastSubmission)}</span>
-                                                            </div>
-                                                        )}
 
-                                                        <div className="pt-2.5 mt-2.5 border-t border-gray-100">
-                                                            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-semibold">Points Breakdown</div>
-                                                            <div className="space-y-1.5 text-xs font-mono">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-gray-600">{entry.easy || 0} Easy × 1</span>
-                                                                    <span className="text-[#0D652D] font-semibold">{(entry.easy || 0) * 1}</span>
+                                                        <div className="space-y-4 relative">
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <div className="bg-linear-to-br from-gray-50/50 to-white rounded-2xl p-3 border border-gray-100 shadow-xs">
+                                                                    <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Global Rank</div>
+                                                                    <div className="text-base font-bold text-gray-900">
+                                                                        {entry.ranking && entry.ranking > 0 ? `#${entry.ranking.toLocaleString()}` : '—'}
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-gray-600">{entry.medium || 0} Med × 3</span>
-                                                                    <span className="text-[#E37400] font-semibold">{(entry.medium || 0) * 3}</span>
-                                                                </div>
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-gray-600">{entry.hard || 0} Hard × 6</span>
-                                                                    <span className="text-[#A50E0E] font-semibold">{(entry.hard || 0) * 6}</span>
-                                                                </div>
-                                                                <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 font-sans">
-                                                                    <span className="text-gray-900 font-semibold">Total Points</span>
-                                                                    <span className="text-gray-900 font-bold text-sm">{entry.totalScore}</span>
+                                                                <div className="bg-linear-to-br from-blue-50/50 to-blue-100/20 rounded-2xl p-3 border border-blue-50/50 shadow-xs">
+                                                                    <div className="text-[10px] text-blue-400 uppercase font-black tracking-widest mb-1">Daily Gain</div>
+                                                                    <div className="text-base font-bold text-blue-600">+{entry.todayPoints} pts</div>
                                                                 </div>
                                                             </div>
+
+                                                            <div className="bg-gray-50/30 backdrop-blur-sm rounded-2xl p-4 border border-gray-100/50 shadow-xs">
+                                                                <div className="flex justify-between items-center mb-3">
+                                                                    <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Problem Stats</span>
+                                                                    <span className="text-xs font-bold text-gray-900 bg-white px-2 py-0.5 rounded-md border border-gray-100 shadow-xs">{entry.totalProblems} Total</span>
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {[
+                                                                        { label: 'Easy', count: entry.easy, color: 'bg-linear-to-r from-emerald-400 to-emerald-600', textColor: 'text-emerald-600' },
+                                                                        { label: 'Medium', count: entry.medium, color: 'bg-linear-to-r from-amber-400 to-amber-600', textColor: 'text-amber-600' },
+                                                                        { label: 'Hard', count: entry.hard, color: 'bg-linear-to-r from-rose-500 to-rose-700', textColor: 'text-rose-600' }
+                                                                    ].map((stat) => (
+                                                                        <div key={stat.label} className="space-y-1.5">
+                                                                            <div className="flex justify-between text-[10px] font-bold">
+                                                                                <span className={stat.textColor}>{stat.label}</span>
+                                                                                <span className="text-gray-500">{stat.count || 0}</span>
+                                                                            </div>
+                                                                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                                                                <motion.div
+                                                                                    initial={{ width: 0 }}
+                                                                                    animate={{ width: `${entry.totalProblems ? ((stat.count || 0) / entry.totalProblems) * 100 : 0}%` }}
+                                                                                    transition={{ duration: 0.8, ease: "easeOut" }}
+                                                                                    className={`h-full ${stat.color} rounded-full`}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center justify-between pt-1">
+                                                                <div className="flex items-center gap-2 text-[10px] font-medium text-gray-400">
+                                                                    <span className="relative flex h-2 w-2">
+                                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                                    </span>
+                                                                    {entry.lastSubmission ? `Active ${getTimeAgo(entry.lastSubmission)}` : 'Inactive recently'}
+                                                                </div>
+                                                                {entry.streak && entry.streak > 0 && (
+                                                                    <div className="text-[10px] font-black text-orange-600 bg-orange-100/50 backdrop-blur-sm px-2.5 py-1 rounded-full border border-orange-200/50">
+                                                                        🔥 {entry.streak}D STREAK
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    </motion.div>
                                                 </div>
-                                            </div>
+                                            </AnimatePresence>
                                         </div>
 
                                         <div className="flex gap-12 items-center">
@@ -710,12 +783,13 @@ export default function HomePage() {
                                                 <span className="text-lg font-medium text-blue-600">{entry.todayPoints}</span>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    </motion.div >
+                                ))
+                                }
+                            </motion.div >
                         </>
                     )}
-                </div>
+                </div >
             </main >
 
             {/* Create Group Modal */}
@@ -812,7 +886,7 @@ export default function HomePage() {
                     </form>
                 </DialogContent>
             </Dialog>
-            
+
             {/* PWA Install Prompt */}
             <PWAInstallPrompt />
         </div>

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import { MessageTemplate } from '@/models/MessageTemplate';
+import { db } from '@/db/drizzle';
+import { messageTemplates } from '@/db/schema';
+import { inArray } from 'drizzle-orm';
 
 // Default templates - Minimalist for initialization
 const defaultTemplates = [
@@ -32,12 +33,10 @@ const defaultTemplates = [
 
 export const POST = requireAdmin(async (req) => {
   try {
-    await dbConnect();
-
     // Check if templates already exist
-    const existingTemplates = await MessageTemplate.find({
-      type: { $in: ['whatsapp_roast', 'email_roast'] }
-    });
+    const existingTemplates = await db.select()
+      .from(messageTemplates)
+      .where(inArray(messageTemplates.type, ['whatsapp_roast', 'email_roast']));
 
     if (existingTemplates.length > 0) {
       return NextResponse.json({
@@ -48,7 +47,7 @@ export const POST = requireAdmin(async (req) => {
     }
 
     // Create default templates
-    const createdTemplates = await MessageTemplate.insertMany(defaultTemplates);
+    const createdTemplates = await db.insert(messageTemplates).values(defaultTemplates).returning();
 
     return NextResponse.json({
       success: true,
