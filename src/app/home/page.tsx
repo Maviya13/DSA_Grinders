@@ -354,43 +354,43 @@ export default function HomePage() {
 
             <main className="max-w-[1000px] mx-auto pt-24 pb-12 px-6">
 
-                {/* Minimalist Welcome/Roast */}
-                <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <h1 className="text-4xl sm:text-5xl font-normal tracking-tight text-gray-900 mb-4">
+                {/* Minimalist Welcome/Roast - EMPHASIS principle */}
+                <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 focal-point">
+                    <h1 className="text-display mb-4">
                         {myPoints === 0 ? "Zero points?" : "Keep climbing."}
                     </h1>
-                    <p className="text-lg text-gray-500 max-w-2xl mx-auto font-light">
+                    <p className="text-body max-w-2xl mx-auto">
                         {myPoints === 0 ? roast : "Great job solving problems today. Don't stop now."}
                     </p>
                 </div>
 
-                {/* Stats Grid - Clean Cards */}
+                {/* Stats Grid - BALANCE & PROPORTION principles */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    {/* Today's Points */}
-                    <div className="bg-white rounded-3xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.12)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-shadow border border-gray-100 flex flex-col items-center justify-center text-center group">
-                        <div className="h-12 w-12 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform text-blue-600">
-                            <Target className="h-6 w-6" />
+                    {/* Today's Points - PRIMARY emphasis */}
+                    <div className="bg-white rounded-3xl p-8 card-floating group group-primary">
+                        <div className="h-14 w-14 bg-[#D2E3FC] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <Target className="h-7 w-7 text-[#174EA6]" />
                         </div>
-                        <p className="text-4xl font-normal text-gray-900 mb-2">{myPoints}</p>
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Points Today</p>
+                        <p className="stat-primary mb-2">{myPoints}</p>
+                        <p className="text-label text-[#174EA6]">Points Today</p>
                     </div>
 
-                    {/* Rank */}
-                    <div className="bg-white rounded-3xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.12)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-shadow border border-gray-100 flex flex-col items-center justify-center text-center group">
-                        <div className="h-12 w-12 bg-yellow-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform text-yellow-600">
-                            <Crown className="h-6 w-6" />
+                    {/* Rank - SECONDARY emphasis */}
+                    <div className="bg-white rounded-3xl p-8 card-floating group group-warning">
+                        <div className="h-14 w-14 bg-[#FEEFC3] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <Crown className="h-7 w-7 text-[#E37400]" />
                         </div>
-                        <p className="text-4xl font-normal text-gray-900 mb-2">#{myRank}</p>
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Current Rank</p>
+                        <p className="stat-primary mb-2">#{myRank}</p>
+                        <p className="text-label text-[#E37400]">Current Rank</p>
                     </div>
 
-                    {/* Total Problems */}
-                    <div className="bg-white rounded-3xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.12)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-shadow border border-gray-100 flex flex-col items-center justify-center text-center group">
-                        <div className="h-12 w-12 bg-green-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform text-green-600">
-                            <Trophy className="h-6 w-6" />
+                    {/* Total Problems - SUCCESS emphasis */}
+                    <div className="bg-white rounded-3xl p-8 card-floating group group-success">
+                        <div className="h-14 w-14 bg-[#CEEAD6] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <Trophy className="h-7 w-7 text-[#0D652D]" />
                         </div>
-                        <p className="text-4xl font-normal text-gray-900 mb-2">{currentUserEntry?.totalProblems || 0}</p>
-                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Lifetime Solved</p>
+                        <p className="stat-primary mb-2">{currentUserEntry?.totalProblems || 0}</p>
+                        <p className="text-label text-[#0D652D]">Lifetime Solved</p>
                     </div>
                 </div>
 
@@ -613,37 +613,13 @@ export default function HomePage() {
                                                             )}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <div className="font-medium text-gray-900 truncate text-sm">{entry.name}</div>
-                                                                {entry.github && (
-                                                                    <a
-                                                                        href={entry.github}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-gray-400 hover:text-gray-900 transition-colors"
-                                                                        title="GitHub Profile"
-                                                                    >
-                                                                        <Github className="w-3 h-3" />
-                                                                    </a>
-                                                                )}
-                                                                {entry.linkedin && (
-                                                                    <a
-                                                                        href={entry.linkedin}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-gray-400 hover:text-[#0077b5] transition-colors"
-                                                                        title="LinkedIn Profile"
-                                                                    >
-                                                                        <Linkedin className="w-3 h-3" />
-                                                                    </a>
-                                                                )}
-                                                            </div>
+                                                            <div className="font-medium text-gray-900 truncate text-sm">{entry.name}</div>
                                                             <div className="text-xs text-gray-500 truncate">@{entry.leetcodeUsername}</div>
                                                         </div>
                                                     </div>
 
                                                     <div className="space-y-2.5 text-xs">
-                                                        {entry.ranking && entry.ranking > 0 && (
+                                                        {(entry.ranking && entry.ranking > 0) && (
                                                             <div className="flex items-center justify-between">
                                                                 <span className="text-gray-500">Global Rank</span>
                                                                 <span className="text-gray-900 font-medium">#{entry.ranking.toLocaleString()}</span>
@@ -653,11 +629,7 @@ export default function HomePage() {
                                                             <span className="text-gray-500">Total Solved</span>
                                                             <span className="text-gray-900 font-medium">{entry.totalProblems || 0}</span>
                                                         </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-gray-500">Points</span>
-                                                            <span className="text-gray-900 font-medium">{entry.totalScore}</span>
-                                                        </div>
-                                                        {entry.streak && entry.streak > 0 && (
+                                                        {entry.streak > 0 && (
                                                             <div className="flex items-center justify-between">
                                                                 <span className="text-gray-500">Current Streak</span>
                                                                 <span className="text-orange-600 font-medium">🔥 {entry.streak} days</span>
@@ -677,19 +649,23 @@ export default function HomePage() {
                                                         )}
 
                                                         <div className="pt-2.5 mt-2.5 border-t border-gray-100">
-                                                            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Problem Breakdown</div>
-                                                            <div className="grid grid-cols-3 gap-2 text-center">
-                                                                <div>
-                                                                    <div className="text-xs font-medium text-gray-900">{entry.easy || 0}</div>
-                                                                    <div className="text-[10px] text-gray-500">Easy</div>
+                                                            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-semibold">Points Breakdown</div>
+                                                            <div className="space-y-1.5 text-xs font-mono">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-gray-600">{entry.easy || 0} Easy × 1</span>
+                                                                    <span className="text-[#0D652D] font-semibold">{(entry.easy || 0) * 1}</span>
                                                                 </div>
-                                                                <div>
-                                                                    <div className="text-xs font-medium text-gray-900">{entry.medium || 0}</div>
-                                                                    <div className="text-[10px] text-gray-500">Medium</div>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-gray-600">{entry.medium || 0} Med × 3</span>
+                                                                    <span className="text-[#E37400] font-semibold">{(entry.medium || 0) * 3}</span>
                                                                 </div>
-                                                                <div>
-                                                                    <div className="text-xs font-medium text-gray-900">{entry.hard || 0}</div>
-                                                                    <div className="text-[10px] text-gray-500">Hard</div>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-gray-600">{entry.hard || 0} Hard × 6</span>
+                                                                    <span className="text-[#A50E0E] font-semibold">{(entry.hard || 0) * 6}</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 font-sans">
+                                                                    <span className="text-gray-900 font-semibold">Total Points</span>
+                                                                    <span className="text-gray-900 font-bold text-sm">{entry.totalScore}</span>
                                                                 </div>
                                                             </div>
                                                         </div>

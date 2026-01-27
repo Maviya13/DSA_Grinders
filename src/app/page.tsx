@@ -62,32 +62,32 @@ export default function Home() {
             <span className="text-sm text-gray-600">Synced with LeetCode</span>
           </div>
 
-          {/* Static Headline */}
-          <h1 className="text-5xl md:text-6xl font-normal text-gray-900 tracking-tight leading-tight">
+          {/* Static Headline - HIERARCHY principle */}
+          <h1 className="text-headline">
             Track progress,
           </h1>
           
           {/* Morphing Text */}
           <MorphingText 
             texts={["together", "daily", "smarter", "faster"]} 
-            className="h-16 md:h-20 text-gray-400 font-normal"
+            className="h-16 md:h-20 text-[#9AA0A6] font-normal"
           />
 
           {/* Subheadline */}
-          <p className="text-lg text-gray-600 max-w-lg mx-auto mt-8 mb-10">
+          <p className="text-body max-w-lg mx-auto mt-8 mb-10">
             A simple way to stay consistent with your DSA practice. 
             Connect your LeetCode, compete with friends.
           </p>
 
-          {/* CTA */}
+          {/* CTA - EMPHASIS with Google Blue */}
           <div className="flex items-center justify-center gap-4">
             <a 
               href="/login"
-              className="px-8 py-3.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-base font-medium rounded-full transition-colors"
+              className="interactive-primary px-8 py-3.5 text-base font-medium rounded-full"
             >
               Get started
             </a>
-            <span className="text-sm text-gray-500">Free forever</span>
+            <span className="text-sm text-[#9AA0A6]">Free forever</span>
           </div>
 
         </div>

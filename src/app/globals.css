@@ -46,9 +46,9 @@
 :root {
   --radius: 0.5rem;
   
-  /* Google Design Colors */
+  /* Google News Official Color Palette */
   --background: #ffffff;
-  --foreground: #202124; /* Google Dark Grey */
+  --foreground: #202124; /* Black */
   
   --card: #ffffff;
   --card-foreground: #202124;
@@ -56,39 +56,66 @@
   --popover: #ffffff;
   --popover-foreground: #202124;
   
-  --primary: #1a73e8; /* Google Blue */
+  /* Primary: Google News Blue */
+  --primary: #174EA6; /* Dark Blue */
+  --primary-hover: #4285F4; /* Medium Blue for hover */
+  --primary-light: #D2E3FC; /* Light Blue */
   --primary-foreground: #ffffff;
   
-  --secondary: #e8f0fe; /* Light Google Blue */
-  --secondary-foreground: #1a73e8;
+  /* Secondary: Google News Colors */
+  --secondary: #F1F3F4; /* Light Grey */
+  --secondary-foreground: #174EA6;
   
-  --muted: #f1f3f4; /* Google Light Grey */
-  --muted-foreground: #5f6368; /* Google Medium Grey */
+  /* Status Colors (Google News Palette) */
+  --success: #0D652D; /* Green */
+  --success-medium: #34A853; /* Medium Green */
+  --success-light: #CEEAD6; /* Light Green */
   
-  --accent: #f8f9fa;
-  --accent-foreground: #202124;
+  --warning: #E37400; /* Orange */
+  --warning-light: #FBBC04; /* Yellow */
+  --warning-lightest: #FEEFC3; /* Light Yellow */
   
-  --destructive: #ea4335; /* Google Red */
+  --danger: #A50E0E; /* Red */
+  --danger-medium: #EA4335; /* Medium Red */
+  --danger-light: #FAD2CF; /* Light Red */
+  
+  /* Muted / Greys */
+  --muted: #F1F3F4; /* Light Grey */
+  --muted-foreground: #9AA0A6; /* Grey */
+  
+  --accent: #D2E3FC; /* Light Blue */
+  --accent-foreground: #174EA6;
+  
+  --destructive: #A50E0E; /* Red from palette */
   --destructive-foreground: #ffffff;
   
-  --border: #dadce0; /* Google Border Grey */
-  --input: #dfe1e5;
-  --ring: #1a73e8;
+  --border: #9AA0A6; /* Grey */
+  --input: #F1F3F4;
+  --ring: #4285F4; /* Medium Blue */
   
-  --chart-1: #4285f4; /* Blue */
-  --chart-2: #ea4335; /* Red */
-  --chart-3: #fbbc04; /* Yellow */
-  --chart-4: #34a853; /* Green */
-  --chart-5: #5f6368; /* Grey */
+  /* Chart colors from Google News */
+  --chart-1: #4285F4; /* Medium Blue */
+  --chart-2: #EA4335; /* Medium Red */
+  --chart-3: #FBBC04; /* Yellow */
+  --chart-4: #34A853; /* Medium Green */
+  --chart-5: #9AA0A6; /* Grey */
+  
+  /* Difficulty Colors (LeetCode style with Google palette) */
+  --easy: #0D652D; /* Dark Green */
+  --easy-bg: #CEEAD6; /* Light Green */
+  --medium: #E37400; /* Orange */
+  --medium-bg: #FEEFC3; /* Light Yellow */
+  --hard: #A50E0E; /* Dark Red */
+  --hard-bg: #FAD2CF; /* Light Red */
   
   --sidebar: #ffffff;
   --sidebar-foreground: #202124;
-  --sidebar-primary: #1a73e8;
+  --sidebar-primary: #174EA6;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f3f4;
+  --sidebar-accent: #F1F3F4;
   --sidebar-accent-foreground: #202124;
-  --sidebar-border: #dadce0;
-  --sidebar-ring: #1a73e8;
+  --sidebar-border: #9AA0A6;
+  --sidebar-ring: #4285F4;
 }
 
 .dark {
@@ -301,4 +328,234 @@ input[type="submit"] {
 
 .tap-feedback:active {
   animation: tap-feedback 0.1s ease-out;
+}
+
+/* ============================================
+   Design Principles Utilities (Google News Style)
+   ============================================ */
+
+/* EMPHASIS / DOMINANCE */
+.focal-point {
+  position: relative;
+  z-index: 10;
+}
+
+.focal-point::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.focal-point:hover::after {
+  opacity: 1;
+}
+
+/* HIERARCHY - Typography Scale (Google News style) */
+.text-display {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.text-headline {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.text-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.text-body-emphasis {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+.text-body {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+.text-caption {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+.text-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* CONTRAST - Difficulty Badges */
+.badge-easy {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  background-color: var(--easy-bg);
+  color: var(--easy);
+  border: 1px solid var(--easy);
+}
+
+.badge-medium {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  background-color: var(--medium-bg);
+  color: var(--medium);
+  border: 1px solid var(--medium);
+}
+
+.badge-hard {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  background-color: var(--hard-bg);
+  color: var(--hard);
+  border: 1px solid var(--hard);
+}
+
+/* RHYTHM - Consistent spacing on 8px grid */
+.space-rhythm-tight > * + * {
+  margin-top: 0.5rem; /* 8px */
+}
+
+.space-rhythm > * + * {
+  margin-top: 1rem; /* 16px */
+}
+
+.space-rhythm-relaxed > * + * {
+  margin-top: 1.5rem; /* 24px */
+}
+
+.space-rhythm-loose > * + * {
+  margin-top: 2rem; /* 32px */
+}
+
+/* BALANCE - Card elevation system */
+.card-flat {
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+
+.card-raised {
+  box-shadow: 
+    0 1px 2px 0 rgba(60, 64, 67, 0.3),
+    0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-floating {
+  box-shadow: 
+    0 4px 6px -1px rgba(60, 64, 67, 0.3),
+    0 2px 4px -1px rgba(60, 64, 67, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-floating:hover {
+  box-shadow: 
+    0 10px 15px -3px rgba(60, 64, 67, 0.3),
+    0 4px 6px -2px rgba(60, 64, 67, 0.15);
+  transform: translateY(-2px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* SIMILARITY - Color-coded groupings */
+.group-primary {
+  border-left: 4px solid var(--primary);
+  background-color: rgba(23, 78, 166, 0.02);
+}
+
+.group-success {
+  border-left: 4px solid var(--success);
+  background-color: rgba(13, 101, 45, 0.02);
+}
+
+.group-warning {
+  border-left: 4px solid var(--warning);
+  background-color: rgba(227, 116, 0, 0.02);
+}
+
+.group-danger {
+  border-left: 4px solid var(--danger);
+  background-color: rgba(165, 14, 14, 0.02);
+}
+
+/* PROPORTION - Stat cards with visual weight */
+.stat-primary {
+  font-size: 3rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--foreground) !important;
+}
+
+.stat-secondary {
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--muted-foreground) !important;
+}
+
+/* Status indicators with Google colors */
+.status-online {
+  background-color: var(--success-medium);
+}
+
+.status-away {
+  background-color: var(--warning-light);
+}
+
+.status-offline {
+  background-color: var(--muted-foreground);
+}
+
+/* Interactive states with proper hierarchy */
+.interactive-primary {
+  background-color: var(--primary);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.interactive-primary:hover {
+  background-color: var(--primary-hover);
+  box-shadow: 0 2px 8px rgba(23, 78, 166, 0.3);
+  transform: translateY(-1px);
+}
+
+.interactive-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(23, 78, 166, 0.3);
 }
