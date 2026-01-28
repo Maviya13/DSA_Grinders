@@ -12,6 +12,7 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
     : {
         auth: {
             getSession: async () => ({ data: { session: null }, error: null }),
+            getUser: async () => ({ data: { user: null }, error: new Error('Supabase configuration missing') }),
             onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
             signInWithOAuth: async () => ({ error: new Error('Supabase configuration missing') }),
             signOut: async () => ({ error: null }),
