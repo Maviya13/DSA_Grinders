@@ -8,6 +8,7 @@ import SplashScreen from "@/components/SplashScreen";
 import OnboardingModal from "@/components/OnboardingModal";
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://dsa-grinders.vercel.app'),
   title: "DSA Grinders | Track LeetCode & Compete with Friends",
   description: "The ultimate DSA tracking tool. Compete with friends, track your LeetCode progress, and stay motivated with automated roasts!",
   keywords: ["DSA", "LeetCode", "Data Structures", "Algorithms", "Coding Competition", "Placement Preparation"],
