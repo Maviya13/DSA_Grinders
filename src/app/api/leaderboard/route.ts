@@ -35,9 +35,11 @@ interface LeaderboardEntry {
   rank: number;
 }
 
-// Cache duration: 2 minutes (120000 ms)
-const CACHE_DURATION_MS = 2 * 60 * 1000;
-const leaderboardCache = new Map<string, CachedLeaderboard>();
+// Cache duration: 5 minutes (300000 ms)
+const CACHE_DURATION_MS = 5 * 60 * 1000;
+
+// Export cache map for manual invalidation
+export const leaderboardCache = new Map<string, CachedLeaderboard>();
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting
@@ -70,6 +72,7 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=300, must-revalidate',
           'X-Cache': 'HIT',
           'X-Cache-Age': Math.floor((now - cached.timestamp) / 1000).toString(),
           ...getRateLimitHeaders(rateLimitResult),
@@ -250,6 +253,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=300, must-revalidate',
         'X-Cache': 'MISS',
         ...getRateLimitHeaders(rateLimitResult),
       },

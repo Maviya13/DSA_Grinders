@@ -5,8 +5,12 @@ import Image from 'next/image'
 
 export default function SplashScreen() {
   const [isVisible, setIsVisible] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
+    // Set mounted state to prevent SSR/client mismatch
+    setIsMounted(true)
+
     // Check if this is a PWA launch
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true
@@ -25,10 +29,11 @@ export default function SplashScreen() {
     return () => clearTimeout(timer)
   }, [])
 
-  if (!isVisible) return null
+  // Don't render anything on server or before mounting
+  if (!isMounted || !isVisible) return null
 
   return (
-    <div className="fixed inset-0 z-9999 bg-white flex flex-col items-center justify-center animate-out fade-out duration-300">
+    <div className="fixed inset-0 z-9999 bg-white flex flex-col items-center justify-center animate-out fade-out duration-300" suppressHydrationWarning>
       <div className="relative w-32 h-32 mb-6 animate-in zoom-in duration-500">
         <Image
           src="/logo.png"
@@ -37,6 +42,7 @@ export default function SplashScreen() {
           height={128}
           className="object-contain"
           priority
+          suppressHydrationWarning
         />
       </div>
 
@@ -49,7 +55,7 @@ export default function SplashScreen() {
       </p>
 
       {/* Loading indicator */}
-      <div className="mt-8 flex gap-1.5">
+      <div className="mt-8 flex gap-1.5" suppressHydrationWarning>
         <div className="w-2 h-2 rounded-full bg-[#1a73e8] animate-bounce" style={{ animationDelay: '0ms' }}></div>
         <div className="w-2 h-2 rounded-full bg-[#1a73e8] animate-bounce" style={{ animationDelay: '150ms' }}></div>
         <div className="w-2 h-2 rounded-full bg-[#1a73e8] animate-bounce" style={{ animationDelay: '300ms' }}></div>

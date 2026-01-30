@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { updateDailyStatsForUser } from '@/lib/leetcode';
+import { leaderboardCache } from '../../leaderboard/route';
 
 export async function POST(req: NextRequest) {
     try {
@@ -17,6 +18,10 @@ export async function POST(req: NextRequest) {
         // Update stats for the current regular user
         const regularUser = user as any;
         const stat = await updateDailyStatsForUser(regularUser.id as number, regularUser.leetcodeUsername);
+
+        // Clear leaderboard cache to force fresh data on next fetch
+        leaderboardCache.clear();
+        console.log('Leaderboard cache cleared after manual sync');
 
         return NextResponse.json({
             message: 'Stats refreshed',
