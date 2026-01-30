@@ -1,8 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/db/drizzle';
-import { users, dailyStats } from '@/db/schema';
+import { users, dailyStats, settings } from '@/db/schema';
 import { eq, and, desc, ne, notLike, sql } from 'drizzle-orm';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS, getRateLimitHeaders } from '@/lib/rateLimit';
+import { getTodayDate } from '@/lib/utils';
 
 // In-memory cache for leaderboard data
 interface CachedLeaderboard {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDate();
 
     // Single optimized query using subqueries to avoid N+1
     // This joins users with their latest stats and today's stats in one go
@@ -179,7 +180,73 @@ export async function GET(request: NextRequest) {
       type,
     });
 
-    return new NextResponse(JSON.stringify(leaderboard), {
+    // 1. Fetch AI roast for the day
+    let dailyRoast = null;
+    try {
+      const [s] = await db.select({ aiRoast: settings.aiRoast }).from(settings).limit(1);
+      if (s?.aiRoast && (s.aiRoast as any).date === today) {
+        dailyRoast = s.aiRoast;
+      }
+    } catch (e) {
+      console.error('Failed to fetch daily roast for leaderboard:', e);
+    }
+
+    // 2. Fetch recent activities from all users for the last 3 days
+    let activities: any[] = [];
+    try {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const threeDaysAgoStr = threeDaysAgo.toISOString().split('T')[0];
+
+      const recentStats = await db.execute(sql`
+        SELECT 
+          u.name as "userName",
+          u.leetcode_username as "leetcodeUsername",
+          ds.avatar,
+          ds.recent_problems as "recentProblems"
+        FROM daily_stats ds
+        JOIN users u ON ds.user_id = u.id
+        WHERE ds.date >= ${threeDaysAgoStr}
+          AND u.role != 'admin'
+          AND u.leetcode_username NOT LIKE 'pending_%'
+        ORDER BY ds.date DESC
+      `);
+
+      // Flatten and de-duplicate activities
+      const seenIds = new Set<string>();
+      const nowTs = Math.floor(Date.now() / 1000);
+      const seventyTwoHoursAgo = nowTs - (3 * 24 * 60 * 60);
+
+      (recentStats.rows as any[]).forEach(row => {
+        const problems = Array.isArray(row.recentProblems) ? row.recentProblems : [];
+        problems.forEach((p: any) => {
+          const problemTs = Number(p.timestamp);
+          // Strict 72-hour filter
+          if (!seenIds.has(p.id) && problemTs >= seventyTwoHoursAgo) {
+            seenIds.add(p.id);
+            activities.push({
+              ...p,
+              userName: row.userName,
+              leetcodeUsername: row.leetcodeUsername,
+              avatar: row.avatar
+            });
+          }
+        });
+      });
+
+      // Sort by timestamp descending
+      activities.sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
+      // Limit to 30 for performance
+      activities = activities.slice(0, 30);
+    } catch (e) {
+      console.error('Failed to fetch recent activities:', e);
+    }
+
+    return new NextResponse(JSON.stringify({
+      entries: leaderboard,
+      dailyRoast,
+      activities
+    }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

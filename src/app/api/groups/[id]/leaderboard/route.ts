@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/db/drizzle';
-import { groups, groupMembers, users, dailyStats } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { groups, groupMembers, users, dailyStats, settings } from '@/db/schema';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import { getTodayDate } from '@/lib/utils';
 
 export const GET = requireAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
     try {
@@ -38,7 +39,7 @@ export const GET = requireAuth(async (req: NextRequest, user: any, { params }: {
             .innerJoin(groupMembers, eq(groupMembers.userId, users.id))
             .where(eq(groupMembers.groupId, groupId));
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDate();
 
         const leaderboard = [];
         for (const member of members) {
@@ -98,10 +99,70 @@ export const GET = requireAuth(async (req: NextRequest, user: any, { params }: {
             entry.rank = index + 1;
         });
 
+        // 1. Fetch AI roast for the day
+        let dailyRoast = null;
+        try {
+            const [s] = await db.select({ aiRoast: settings.aiRoast }).from(settings).limit(1);
+            if (s?.aiRoast && (s.aiRoast as any).date === today) {
+                dailyRoast = s.aiRoast;
+            }
+        } catch (e) {
+            console.error('Failed to fetch daily roast for group leaderboard:', e);
+        }
+
+        // 2. Fetch community-wide activities for the last 3 days
+        let activities: any[] = [];
+        try {
+            const threeDaysAgo = new Date();
+            threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+            const threeDaysAgoStr = threeDaysAgo.toISOString().split('T')[0];
+
+            const recentStats = await db.execute(sql`
+                SELECT 
+                    u.name as "userName",
+                    u.leetcode_username as "leetcodeUsername",
+                    ds.avatar,
+                    ds.recent_problems as "recentProblems"
+                FROM daily_stats ds
+                JOIN users u ON ds.user_id = u.id
+                WHERE ds.date >= ${threeDaysAgoStr}
+                    AND u.role != 'admin'
+                    AND u.leetcode_username NOT LIKE 'pending_%'
+                ORDER BY ds.date DESC
+            `);
+
+            const seenIds = new Set<string>();
+            const nowTs = Math.floor(Date.now() / 1000);
+            const seventyTwoHoursAgo = nowTs - (3 * 24 * 60 * 60);
+
+            (recentStats.rows as any[]).forEach(row => {
+                const problems = Array.isArray(row.recentProblems) ? row.recentProblems : [];
+                problems.forEach((p: any) => {
+                    const problemTs = Number(p.timestamp);
+                    if (!seenIds.has(p.id) && problemTs >= seventyTwoHoursAgo) {
+                        seenIds.add(p.id);
+                        activities.push({
+                            ...p,
+                            userName: row.userName,
+                            leetcodeUsername: row.leetcodeUsername,
+                            avatar: row.avatar
+                        });
+                    }
+                });
+            });
+
+            activities.sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
+            activities = activities.slice(0, 30);
+        } catch (e) {
+            console.error('Failed to fetch activities for group leaderboard:', e);
+        }
+
         return NextResponse.json({
             groupName: group.name,
             groupCode: group.code,
-            leaderboard
+            leaderboard,
+            dailyRoast,
+            activities
         });
 
     } catch (error: any) {

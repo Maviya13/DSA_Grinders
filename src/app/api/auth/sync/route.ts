@@ -3,6 +3,7 @@ import { db } from '@/db/drizzle';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { supabase } from '@/lib/supabase';
+import { isProfileIncomplete } from '@/lib/auth';
 
 export async function POST(req: Request) {
     try {
@@ -64,25 +65,10 @@ export async function POST(req: Request) {
                     const [retryUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
                     if (retryUser) {
                         // Proceed to handle as existing user (fall through to existing logic below isn't easy here, so return immediately)
-                        const isProfileIncomplete =
-                            !retryUser.leetcodeUsername ||
-                            retryUser.leetcodeUsername.startsWith('pending_') ||
-                            !retryUser.github ||
-                            retryUser.github === 'pending' ||
-                            !retryUser.phoneNumber ||
-                            !retryUser.linkedin;
-
                         return NextResponse.json({
                             user: {
-                                id: retryUser.id,
-                                name: retryUser.name,
-                                email: retryUser.email,
-                                leetcodeUsername: retryUser.leetcodeUsername,
-                                github: retryUser.github,
-                                linkedin: retryUser.linkedin,
-                                phoneNumber: retryUser.phoneNumber,
-                                role: retryUser.role,
-                                isProfileIncomplete,
+                                ...retryUser,
+                                isProfileIncomplete: isProfileIncomplete(retryUser),
                             },
                         });
                     }
@@ -91,26 +77,10 @@ export async function POST(req: Request) {
             }
         }
 
-        // User exists, check if profile is incomplete
-        const isProfileIncomplete =
-            !existingUser.leetcodeUsername ||
-            existingUser.leetcodeUsername.startsWith('pending_') ||
-            !existingUser.github ||
-            existingUser.github === 'pending' ||
-            !existingUser.phoneNumber ||
-            !existingUser.linkedin;
-
         return NextResponse.json({
             user: {
-                id: existingUser.id,
-                name: existingUser.name,
-                email: existingUser.email,
-                leetcodeUsername: existingUser.leetcodeUsername,
-                github: existingUser.github,
-                linkedin: existingUser.linkedin,
-                phoneNumber: existingUser.phoneNumber,
-                role: existingUser.role,
-                isProfileIncomplete,
+                ...existingUser,
+                isProfileIncomplete: isProfileIncomplete(existingUser),
             },
         });
 

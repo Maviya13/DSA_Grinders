@@ -1,13 +1,4 @@
-/**
- * Message Configuration
- * 
- * All roasts, insults, and message templates are defined here.
- * No database needed - just edit this file to change messages.
- */
 
-// ============================================================
-// ROASTS - Random motivational/insulting messages
-// ============================================================
 
 export const ROASTS = [
   "Abe gadhe, DSA kar varna Swiggy pe delivery karega zindagi bhar! 🛵",
@@ -23,6 +14,13 @@ export const ROASTS = [
   "Aaj bhi kuch nahi kiya? Teri productivity toh COVID se bhi zyada khatarnak hai! 🦠",
   "Tere resume mein sirf WhatsApp forward karne ka experience hai kya? 📱",
   "DSA Dhurandhar banne aaya tha, DSA Bekaar ban gaya! 🤡",
+  "Did you solve anything today or just scrolling?",
+  "Your competitors are grinding right now. What are you doing?",
+  "That 0 points is making recruiters cry!",
+  "Bro solve at least one problem, need to impress that recruiter!",
+  "Sitting idle? Try that graph question!",
+  "Your struggle story will go viral on LinkedIn... for the wrong reasons!",
+  "Can't even do Two Sum? Maybe engineering isn't for you!",
 ];
 
 export const INSULTS = [
@@ -36,10 +34,6 @@ export const INSULTS = [
   "You're not lazy, you're just on energy-saving mode... permanently.",
 ];
 
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
-
 export function getRandomRoast(): string {
   return ROASTS[Math.floor(Math.random() * ROASTS.length)];
 }
@@ -48,95 +42,319 @@ export function getRandomInsult(): string {
   return INSULTS[Math.floor(Math.random() * INSULTS.length)];
 }
 
-// ============================================================
-// WHATSAPP TEMPLATE
-// ============================================================
+export function getWhatsAppMessage(userName: string, roast?: string, insult?: string, fullMessage?: string): string {
+  if (fullMessage) {
+    return `${fullMessage}\n\n— DSA Grinders Team`;
+  }
 
-export function getWhatsAppMessage(userName: string, roast?: string, insult?: string): string {
   const r = roast || getRandomRoast();
   const i = insult || getRandomInsult();
 
-  return `🔥 *Wake up, ${userName}!* 🔥
+  return `🔥 *Wake up, ${userName}!*
 
-*REALITY:* ${r}
-*TRUTH:* ${i}
+${r}
 
-Stop scrolling and start coding! 🚀
+${i}
 
-🎯 *Goal:* 2+ Medium problems
-💻 *Solve:* https://leetcode.com/problemset/
-🌐 *Track:* https://dsa-grinders.vercel.app/
+Stop scrolling. Start coding. Your competitors aren't waiting.
 
-*Competition is winning. GET TO WORK!* 💪
----
-DSA Grinders 💀`;
+*Goal:* 2+ Medium problems today 💪
+
+— DSA Grinders Team`;
 }
 
-// ============================================================
-// EMAIL TEMPLATES
-// ============================================================
-
 const EMAIL_STYLE = `
-  body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #e2e8f0; }
-  .container { max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid #334155; }
-  .header { padding: 40px 20px; text-align: center; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border-bottom: 2px solid #ef4444; }
-  .logo { width: 80px; height: 80px; margin-bottom: 16px; border-radius: 20px; }
-  .title { margin: 0; font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: -0.025em; }
-  .subtitle { margin: 4px 0 0 0; font-size: 14px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; }
-  .content { padding: 40px; }
-  .greeting { font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 24px; }
-  .roast-card { background-color: #0f172a; border-left: 4px solid #ef4444; padding: 24px; border-radius: 8px; margin-bottom: 24px; }
-  .roast-text { margin: 0; font-size: 18px; color: #fecaca; font-weight: 500; font-style: italic; line-height: 1.6; }
-  .harsh-truth { font-size: 15px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; border-top: 1px solid #334155; pt: 16px; margin-top: 16px; }
-  .instruction { font-size: 16px; color: #cbd5e1; margin-bottom: 24px; line-height: 1.6; }
-  .btn-primary { display: block; background-color: #ef4444; color: #ffffff; padding: 18px 32px; font-size: 18px; font-weight: 700; text-decoration: none; border-radius: 12px; text-align: center; margin-bottom: 16px; transition: background-color 0.2s; }
-  .btn-secondary { display: block; background-color: transparent; border: 2px solid #334155; color: #cbd5e1; padding: 14px 24px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 10px; text-align: center; }
-  .footer { padding: 32px; background-color: #0f172a; text-align: center; font-size: 12px; color: #64748b; }
-  .footer-link { color: #94a3b8; text-decoration: underline; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    margin: 0; 
+    padding: 0; 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; 
+    background-color: #f9fafb;
+    color: #111827; 
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .email-wrapper { 
+    padding: 40px 20px; 
+  }
+  .email-container { 
+    max-width: 600px; 
+    margin: 0 auto; 
+    background-color: #ffffff; 
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  
+  /* Header */
+  .email-header {
+    padding: 32px 40px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .logo-text { 
+    font-size: 13px; 
+    font-weight: 700; 
+    color: #6b7280;
+    text-transform: uppercase; 
+    letter-spacing: 0.05em;
+  }
+  
+  /* Content */
+  .email-content { 
+    padding: 40px; 
+  }
+  .greeting { 
+    font-size: 24px; 
+    font-weight: 700; 
+    color: #111827;
+    margin-bottom: 24px;
+    line-height: 1.3;
+  }
+  .greeting-name {
+    color: #3b82f6;
+  }
+  
+  /* Roast Box */
+  .roast-box { 
+    background-color: #fef2f2;
+    border-left: 3px solid #ef4444;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    border-radius: 4px;
+  }
+  .roast-text { 
+    margin: 0; 
+    font-size: 16px; 
+    color: #991b1b; 
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  
+  /* Message Box */
+  .message-box {
+    background-color: #f9fafb;
+    padding: 20px 24px;
+    border-radius: 4px;
+    margin-bottom: 24px;
+  }
+  .message-text { 
+    font-size: 15px; 
+    color: #4b5563;
+    margin: 0;
+    line-height: 1.6;
+  }
+  
+  /* Truth Section */
+  .truth-section {
+    margin-bottom: 32px;
+    padding: 16px 0;
+  }
+  .truth-label { 
+    font-size: 12px; 
+    font-weight: 600; 
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .truth-text { 
+    font-size: 15px; 
+    color: #374151;
+    font-style: italic;
+    margin: 0;
+  }
+  
+  /* Stats */
+  .stats-grid {
+    display: table;
+    width: 100%;
+    margin-bottom: 32px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .stats-row {
+    display: table-row;
+  }
+  .stat-cell {
+    display: table-cell;
+    padding: 16px;
+    text-align: center;
+    border-right: 1px solid #e5e7eb;
+    background-color: #fafafa;
+  }
+  .stat-cell:last-child {
+    border-right: none;
+  }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  /* Buttons */
+  .button-group {
+    margin-bottom: 24px;
+  }
+  .btn { 
+    display: inline-block;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 6px;
+    text-align: center;
+    margin-right: 12px;
+    margin-bottom: 12px;
+  }
+  .btn-primary {
+    background-color: #3b82f6;
+    color: #ffffff;
+  }
+  .btn-secondary {
+    background-color: #ffffff;
+    color: #3b82f6;
+    border: 1px solid #3b82f6;
+  }
+  
+  /* Footer */
+  .email-footer { 
+    padding: 32px 40px;
+    text-align: center;
+    background-color: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+  }
+  .footer-text {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 12px;
+  }
+  .footer-links {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+  .footer-link {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+  
+  /* Mobile */
+  @media only screen and (max-width: 600px) {
+    .email-wrapper { padding: 20px 10px; }
+    .email-content { padding: 32px 24px; }
+    .email-header { padding: 24px; }
+    .email-footer { padding: 24px; }
+    .greeting { font-size: 20px; }
+    .stats-grid { display: block; }
+    .stats-row { display: block; }
+    .stat-cell { 
+      display: block; 
+      border-right: none;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .stat-cell:last-child {
+      border-bottom: none;
+    }
+    .btn {
+      display: block;
+      margin-right: 0;
+      width: 100%;
+    }
+  }
 `;
 
-export function getEmailHTML(userName: string, roast?: string, insult?: string): string {
+export function getEmailHTML(userName: string, roast?: string, insult?: string, fullMessage?: string): string {
   const r = roast || getRandomRoast();
   const i = insult || getRandomInsult();
 
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>DSA Grinders - Daily Reminder</title>
   <style>${EMAIL_STYLE}</style>
 </head>
 <body>
-  <div style="padding: 20px;">
-    <div class="container">
-      <div class="header">
-        <img src="cid:logo" alt="DSA Grinders" class="logo">
-        <h1 class="title">DSA GRINDERS</h1>
-        <p class="subtitle">Daily Reality Check</p>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <!-- Header -->
+      <div class="email-header">
+        <div class="logo-text">DSA Grinders</div>
       </div>
       
-      <div class="content">
-        <p class="greeting">Hey ${userName}! 🔥</p>
+      <!-- Content -->
+      <div class="email-content">
+        ${!fullMessage ? `
+        <h1 class="greeting">
+          Hey <span class="greeting-name">${userName}</span> 👋
+        </h1>
+        ` : ''}
         
-        <div class="roast-card">
-          <p class="roast-text">${r}</p>
+        <!-- Roast -->
+        <div class="roast-box">
+          <p class="roast-text">${fullMessage || r}</p>
         </div>
         
-        <p class="instruction">
-          Your competitors are grinding LeetCode <strong>right now</strong> while you're reading this. 
-          Every minute you waste is a minute they use to take your future job.
+        ${!fullMessage ? `
+        <!-- Message -->
+        <div class="message-box">
+          <p class="message-text">
+            Your competitors are grinding right now. Every minute counts when you're preparing for your dream job.
+          </p>
+        </div>
+        
+        <!-- Truth -->
+        <div class="truth-section">
+          <div class="truth-label">Reality Check</div>
+          <p class="truth-text">${i}</p>
+        </div>
+        
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stats-row">
+            <div class="stat-cell">
+              <span class="stat-label">Daily Goal</span>
+              <span class="stat-value">2+</span>
+            </div>
+            <div class="stat-cell">
+              <span class="stat-label">Difficulty</span>
+              <span class="stat-value">Medium</span>
+            </div>
+            <div class="stat-cell">
+              <span class="stat-label">Time Left</span>
+              <span class="stat-value">Today</span>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+        
+        <!-- Buttons -->
+        <div class="button-group">
+          <a href="https://leetcode.com/problemset/" class="btn btn-primary">Start Solving</a>
+          <a href="https://dsa-grinders.vercel.app/" class="btn btn-secondary">View Dashboard</a>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="email-footer">
+        <p class="footer-text">
+          Keep grinding. Your future self will thank you.
         </p>
-
-        <div class="harsh-truth">
-          💡 <strong>HARSH TRUTH:</strong> ${i}
-        </div>
-        
-        <a href="https://leetcode.com/problemset/" class="btn-primary">SOLVE A PROBLEM NOW</a>
-        <a href="https://dsa-grinders.vercel.app/" class="btn-secondary">View Your Dashboard</a>
-      </div>
-      
-      <div class="footer">
-        <p>Keep grinding or keep failing. The choice is yours.</p>
-        <p style="margin-top: 12px;">
-          Sent with 💀 from <a href="https://dsa-grinders.vercel.app/" class="footer-link">DSA Grinders</a>
+        <p class="footer-links">
+          <a href="https://dsa-grinders.vercel.app/" class="footer-link">Leaderboard</a>
+          •
+          <a href="https://leetcode.com" class="footer-link">LeetCode</a>
         </p>
       </div>
     </div>
@@ -152,31 +370,20 @@ export function getCustomEmailHTML(userName: string, subject: string, message: s
   <style>${EMAIL_STYLE}</style>
 </head>
 <body>
-  <div style="padding: 20px;">
+  <div class="wrapper">
     <div class="container">
       <div class="header">
-        <img src="cid:logo" alt="DSA Grinders" class="logo">
-        <h1 class="title">DSA GRINDERS</h1>
-        <p class="subtitle">Admin Message</p>
+        <div class="logo-text">DSA Grinder Team</div>
       </div>
       
       <div class="content">
-        <p class="greeting">Hey ${userName}!</p>
-        
-        <div style="background-color: #0f172a; padding: 24px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 24px;">
-          <h3 style="color: #ef4444; margin: 0 0 12px 0;">${subject}</h3>
-          <p style="margin: 0; font-size: 16px; color: #e2e8f0; line-height: 1.6; white-space: pre-wrap;">${message}</p>
-        </div>
-        
-        <a href="https://dsa-grinders.vercel.app/" class="btn-primary">GO TO WEBSITE</a>
-        <a href="https://leetcode.com/problemset/" class="btn-secondary">Open LeetCode</a>
+        <h1 class="greeting">${subject}</h1>
+        <p class="instruction" style="white-space: pre-wrap; font-size: 16px; color: #1e293b;">${message}</p>
+        <a href="https://dsa-grinders.vercel.app/" class="btn">Check leaderboard</a>
       </div>
       
       <div class="footer">
-        <p>This is a direct message from the DSA Grinders admin team.</p>
-        <p style="margin-top: 12px;">
-          <a href="https://dsa-grinders.vercel.app/" class="footer-link">dsa-grinders.vercel.app</a>
-        </p>
+        <p>System message from DSA Grinder Team</p>
       </div>
     </div>
   </div>

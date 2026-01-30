@@ -69,22 +69,25 @@ export const POST = requireAuth(async (req: NextRequest, user: any) => {
             throw new Error('Failed to generate unique group code. Please try again.');
         }
 
-        // Create group
-        const [newGroup] = await db.insert(groups).values({
-            name,
-            code,
-            description,
-            owner: user.id,
-        }).returning();
+        // Create group and add owner as member in a transaction
+        const { group, member } = await db.transaction(async (tx) => {
+            const [newGroup] = await tx.insert(groups).values({
+                name,
+                code,
+                description,
+                owner: user.id,
+            }).returning();
 
-        // Add creator as group member
-        await db.insert(groupMembers).values({
-            groupId: newGroup.id,
-            userId: user.id,
+            const [newMember] = await tx.insert(groupMembers).values({
+                groupId: newGroup.id,
+                userId: user.id,
+            }).returning();
+
+            return { group: newGroup, member: newMember };
         });
 
         return NextResponse.json({
-            group: newGroup,
+            group,
             message: 'Group created successfully'
         });
 

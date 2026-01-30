@@ -1,5 +1,6 @@
-// Shared types for API routes and client-side code
-import { User, DailyStat, Group, Setting, MessageTemplate } from '@/db/schema';
+import { User, DailyStat, Group, Setting } from '@/db/schema';
+
+export type { User, DailyStat, Group, Setting };
 
 // ============================================================
 // User Types
@@ -31,6 +32,13 @@ export interface PublicUserProfile {
 // LeetCode Types
 // ============================================================
 
+export interface LeetCodeSubmission {
+    id: string;
+    title: string;
+    titleSlug: string;
+    timestamp: string;
+}
+
 export interface LeetCodeStats {
     easy: number;
     medium: number;
@@ -39,7 +47,7 @@ export interface LeetCodeStats {
     ranking: number;
     avatar: string;
     country: string;
-    recentSubmissions: string[];
+    recentSubmissions: LeetCodeSubmission[];
     streak: number;
     lastSubmission: string | null;
 }
@@ -70,7 +78,7 @@ export interface LeaderboardEntry {
     country?: string;
     streak?: number;
     lastSubmission?: string;
-    recentProblems?: string[];
+    recentProblems?: LeetCodeSubmission[];
     github?: string;
     linkedin?: string;
     rank: number;

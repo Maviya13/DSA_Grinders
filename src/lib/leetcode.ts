@@ -1,6 +1,7 @@
 import { db } from '@/db/drizzle';
 import { dailyStats } from '@/db/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
+import { getTodayDate } from './utils';
 import type { LeetCodeStats, LeetCodeAPIError } from '@/types';
 
 const LEETCODE_GRAPHQL = 'https://leetcode.com/graphql';
@@ -89,14 +90,22 @@ interface LeetCodeMatchedUser {
 interface LeetCodeGraphQLResponse {
   data: {
     matchedUser: LeetCodeMatchedUser | null;
+    recentAcSubmissionList: LeetCodeSubmission[] | null;
   };
   errors?: Array<{ message: string }>;
+}
+
+export interface LeetCodeSubmission {
+  id: string;
+  title: string;
+  titleSlug: string;
+  timestamp: string;
 }
 
 async function fetchLeetCodeUserWithRetry(
   username: string,
   retryCount: number = 0
-): Promise<LeetCodeMatchedUser> {
+): Promise<{ matchedUser: LeetCodeMatchedUser | null; recentSubmissions: LeetCodeSubmission[] }> {
   const query = `
     query getUserProfile($username: String!) {
       matchedUser(username: $username) {
@@ -114,6 +123,12 @@ async function fetchLeetCodeUserWithRetry(
           }
         }
         submissionCalendar
+      }
+      recentAcSubmissionList(username: $username, limit: 15) {
+        id
+        title
+        titleSlug
+        timestamp
       }
     }
   `;
@@ -179,15 +194,10 @@ async function fetchLeetCodeUserWithRetry(
       );
     }
 
-    if (!data.data?.matchedUser) {
-      throw new LeetCodeError(
-        'USER_NOT_FOUND',
-        `User "${username}" not found on LeetCode. Please check the username is correct.`,
-        false
-      );
-    }
-
-    return data.data.matchedUser;
+    return {
+      matchedUser: data.data.matchedUser,
+      recentSubmissions: data.data.recentAcSubmissionList || []
+    };
 
   } catch (error) {
     // Handle network errors with retry
@@ -221,7 +231,15 @@ async function fetchLeetCodeUserWithRetry(
 
 export async function fetchLeetCodeStats(username: string): Promise<LeetCodeStats> {
   // Use the retry-enabled fetch function
-  const matchedUser = await fetchLeetCodeUserWithRetry(username);
+  const { matchedUser, recentSubmissions } = await fetchLeetCodeUserWithRetry(username);
+
+  if (!matchedUser) {
+    throw new LeetCodeError(
+      'USER_NOT_FOUND',
+      `User "${username}" not found on LeetCode. Please check the username is correct.`,
+      false
+    );
+  }
 
   const submitStats = matchedUser.submitStatsGlobal;
   if (!submitStats || !submitStats.acSubmissionNum || submitStats.acSubmissionNum.length === 0) {
@@ -272,7 +290,7 @@ export async function fetchLeetCodeStats(username: string): Promise<LeetCodeStat
     ranking,
     avatar,
     country,
-    recentSubmissions: [], // Not available from public API
+    recentSubmissions,
     streak,
     lastSubmission,
   };
@@ -280,7 +298,7 @@ export async function fetchLeetCodeStats(username: string): Promise<LeetCodeStat
 
 export async function updateDailyStatsForUser(userId: number, leetcodeUsername: string) {
   const stats = await fetchLeetCodeStats(leetcodeUsername);
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDate();
 
   // Find today's stat or the most recent one
   const [todayStat] = await db.select()
@@ -326,7 +344,7 @@ export async function updateDailyStatsForUser(userId: number, leetcodeUsername: 
     country: stats.country,
     streak: stats.streak,
     lastSubmission: stats.lastSubmission,
-    recentProblems: stats.recentSubmissions.map((s: any) => s.title),
+    recentProblems: stats.recentSubmissions,
     previousTotal: todayStat ? previousTotal : stats.total, // Keep original baseline
     todayPoints,
   };

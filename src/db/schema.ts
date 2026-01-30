@@ -47,6 +47,7 @@ export const settings = pgTable('settings', {
   skipWeekends: boolean('skip_weekends').default(false),
   skipHolidays: boolean('skip_holidays').default(false),
   customSkipDates: jsonb('custom_skip_dates').default([]),
+  aiRoast: jsonb('ai_roast'), // Stores { roast, insult, date }
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

@@ -101,7 +101,7 @@ export default function PWAInstallPrompt() {
 
         {/* Content */}
         <div className="flex items-start gap-3 pr-6">
-          <div className="flex-shrink-0 w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+          <div className="shrink-0 w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
             <Smartphone className="h-6 w-6 text-[#1a73e8]" />
           </div>
           

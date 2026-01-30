@@ -4,9 +4,9 @@ import { db } from '@/db/drizzle';
 import { users, settings, User, Setting } from '@/db/schema';
 import { eq, ne, and, notLike } from 'drizzle-orm';
 import { updateDailyStatsForUser } from '@/lib/leetcode';
-import { sendWhatsAppMessage } from '@/lib/whatsapp';
-import { getEmailTransporter } from '@/lib/emailTransporter';
-import { getWhatsAppMessage, getEmailHTML, getEmailSubject } from '@/config/messages';
+import { sendConfigEmail, sendConfigWhatsApp } from '@/lib/messaging';
+import { getTodayDate } from '@/lib/utils';
+import { generateDynamicRoast, DynamicContent } from '@/lib/ai';
 
 // Helper function to check if today should be skipped
 function shouldSkipToday(s: Setting): boolean {
@@ -51,73 +51,17 @@ async function resetDailyCountersIfNeeded(s: Setting): Promise<Setting> {
   return s;
 }
 
-// Helper function to check if current time matches any scheduled time
-function isTimeToSend(scheduledTimes: string[] | undefined, timezone: string = 'Asia/Kolkata', devMode: boolean = false): boolean {
-  if (devMode) return true;
-  if (!scheduledTimes || scheduledTimes.length === 0) return false;
-
-  const now = new Date();
-  const currentTime = now.toLocaleTimeString('en-IN', {
-    timeZone: timezone,
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-
-  const [currentHour, currentMinute] = currentTime.split(':').map(Number);
-  const currentMinutes = currentHour * 60 + currentMinute;
-
-  return scheduledTimes.some(scheduledTime => {
-    const [scheduledHour, scheduledMinute] = scheduledTime.split(':').map(Number);
-    const scheduledMinutes = scheduledHour * 60 + scheduledMinute;
-    return Math.abs(currentMinutes - scheduledMinutes) <= 15;
-  });
+// Helper function to process users in batches (simple concurrency control)
+async function processInBatches<T, R>(items: T[], batchSize: number, processor: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(processor));
+    results.push(...batchResults);
+  }
+  return results;
 }
 
-// Send email using config template
-async function sendConfigEmail(user: User) {
-  const transporter = getEmailTransporter();
-
-  const mailOptions = {
-    from: `"DSA Grinders 🔥" <${process.env.SMTP_EMAIL}>`,
-    to: user.email,
-    subject: getEmailSubject(user.name),
-    html: getEmailHTML(user.name),
-    attachments: [
-      {
-        filename: 'logo.png',
-        path: path.join(process.cwd(), 'public', 'logo.png'),
-        cid: 'logo'
-      }
-    ]
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    return { success: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to send email';
-    console.error('Email send error:', message);
-    return { success: false, error: message };
-  }
-}
-
-// Send WhatsApp using config template
-async function sendConfigWhatsApp(user: User) {
-  if (!user.phoneNumber) {
-    return { success: false, error: 'No phone number' };
-  }
-
-  const message = getWhatsAppMessage(user.name);
-
-  try {
-    return await sendWhatsAppMessage(user.phoneNumber, message);
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Failed to send WhatsApp';
-    console.error('WhatsApp send error:', msg);
-    return { success: false, error: msg };
-  }
-}
 
 export async function GET(req: Request) {
   // Auth check using CRON_SECRET
@@ -141,6 +85,7 @@ export async function GET(req: Request) {
   }
 
   try {
+    const today = getTodayDate();
     // Get automation settings
     let [s] = await db.select().from(settings).limit(1);
     if (!s) {
@@ -184,32 +129,65 @@ export async function GET(req: Request) {
       });
     }
 
+    // When this endpoint is hit, we process regardless of internal schedule
+    // The external cron service (cron-job.org) handles the trigger timing.
     const shouldSendEmails = s.emailAutomationEnabled &&
-      isTimeToSend(s.emailSchedule as string[], s.timezone || undefined, isDevelopment) &&
       (s.emailsSentToday ?? 0) < (s.maxDailyEmails ?? 1);
 
     const shouldSendWhatsApp = s.whatsappAutomationEnabled &&
-      isTimeToSend(s.whatsappSchedule as string[], s.timezone || undefined, isDevelopment) &&
       (s.whatsappSentToday ?? 0) < (s.maxDailyWhatsapp ?? 1);
 
-    if (!shouldSendEmails && !shouldSendWhatsApp) {
+    const searchParams = new URL(req.url).searchParams;
+    const testEmail = searchParams.get('testEmail');
+
+    if (!shouldSendEmails && !shouldSendWhatsApp && !testEmail) {
       return NextResponse.json({
-        message: 'Not time to send messages or daily limits reached',
+        message: 'Daily limits reached for both Email and WhatsApp',
         shouldSendEmails,
         shouldSendWhatsApp,
-        currentTime: new Date().toLocaleTimeString('en-IN', { timeZone: s.timezone || 'Asia/Kolkata' }),
-        emailSchedule: s.emailSchedule,
-        whatsappSchedule: s.whatsappSchedule
+        emailsSentToday: s.emailsSentToday,
+        whatsappSentToday: s.whatsappSentToday,
+        maxDailyEmails: s.maxDailyEmails,
+        maxDailyWhatsapp: s.maxDailyWhatsapp
       });
     }
 
     // Exclude admin accounts and pending profiles
-    const allUsers = await db.select().from(users).where(
+    let allUsers = await db.select().from(users).where(
       and(
         ne(users.role, 'admin'),
         notLike(users.leetcodeUsername, 'pending_%')
       )
     );
+
+    if (testEmail) {
+      allUsers = allUsers.filter(u => u.email === testEmail);
+      if (allUsers.length === 0) {
+        return NextResponse.json({ message: `No user found with email: ${testEmail}` }, { status: 404 });
+      }
+    }
+
+    // 4. Fetch Dynamic AI Roast (once per cron run)
+    let aiContent: DynamicContent | null = null;
+    try {
+      // Use the first user's name or a generic name for context
+      const sampleName = allUsers[0]?.name?.split(' ')[0] || 'Dhurandhar';
+      aiContent = await generateDynamicRoast(sampleName);
+      if (aiContent) {
+        console.log('AI: Successfully generated daily roast');
+        // Save to settings for dashboard use
+        await db.update(settings).set({
+          aiRoast: {
+            roast: aiContent.dashboardRoast,
+            fullMessage: aiContent.fullMessage,
+            date: today
+          },
+          updatedAt: new Date()
+        }).where(eq(settings.id, s.id));
+      }
+    } catch (error) {
+      console.error('AI: Failed to generate daily roast', error);
+    }
 
     interface UserResult {
       username: string;
@@ -220,11 +198,10 @@ export async function GET(req: Request) {
       whatsappSent: { success: boolean; skipped?: boolean; reason?: string; error?: string };
     }
 
-    const results: UserResult[] = [];
     let emailsSentCount = 0;
     let whatsappSentCount = 0;
 
-    for (const user of allUsers) {
+    const processUser = async (user: User): Promise<UserResult> => {
       const userResult: UserResult = {
         username: user.leetcodeUsername,
         email: user.email,
@@ -234,47 +211,55 @@ export async function GET(req: Request) {
         whatsappSent: { success: false, skipped: false }
       };
 
-      // Update LeetCode stats
+      // 1. Update LeetCode stats
       try {
         await updateDailyStatsForUser(user.id, user.leetcodeUsername);
         userResult.statsUpdate = { success: true };
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Stats update failed';
-        userResult.statsUpdate = { success: false, error: message };
+        userResult.statsUpdate = { success: false, error: error instanceof Error ? error.message : 'Stats update failed' };
       }
 
-      // Send email
-      if (shouldSendEmails && emailsSentCount + (s.emailsSentToday ?? 0) < (s.maxDailyEmails ?? 1)) {
-        try {
-          const emailResult = await sendConfigEmail(user);
-          userResult.emailSent = emailResult;
-          if (emailResult.success) emailsSentCount++;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Email failed';
-          userResult.emailSent = { success: false, error: message };
-        }
+      // Personalize the AI content for this user
+      let personalizedFullMessage = aiContent?.fullMessage;
+      let personalizedDashboardRoast = aiContent?.dashboardRoast;
+
+      if (personalizedFullMessage) {
+        personalizedFullMessage = personalizedFullMessage.replace(/\[NAME\]/g, user.name.split(' ')[0]);
+      }
+      if (personalizedDashboardRoast) {
+        personalizedDashboardRoast = personalizedDashboardRoast.replace(/\[NAME\]/g, user.name.split(' ')[0]);
+      }
+
+      // 2. Send email (if within limits)
+      // Note: We check limits globally after processing, but here we check locally to avoid over-sending in the same batch
+      const currentEmailTotal = (s.emailsSentToday ?? 0) + emailsSentCount;
+      if (testEmail || (shouldSendEmails && currentEmailTotal < (s.maxDailyEmails ?? 1))) {
+        const emailResult = await sendConfigEmail(user, undefined, undefined, personalizedFullMessage);
+        userResult.emailSent = emailResult;
+        if (emailResult.success) emailsSentCount++;
       } else {
-        userResult.emailSent = { success: false, skipped: true, reason: 'Not time or limit reached' };
+        userResult.emailSent = { success: false, skipped: true, reason: 'Limit reached or disabled' };
       }
 
-      // Send WhatsApp
-      if (shouldSendWhatsApp && whatsappSentCount + (s.whatsappSentToday ?? 0) < (s.maxDailyWhatsapp ?? 1) && user.phoneNumber) {
-        try {
-          const whatsappResult = await sendConfigWhatsApp(user);
-          userResult.whatsappSent = whatsappResult;
-          if (whatsappResult.success) whatsappSentCount++;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'WhatsApp failed';
-          userResult.whatsappSent = { success: false, error: message };
-        }
+      // 3. Send WhatsApp (if within limits)
+      const currentWhatsappTotal = (s.whatsappSentToday ?? 0) + whatsappSentCount;
+      if (testEmail || (shouldSendWhatsApp && currentWhatsappTotal < (s.maxDailyWhatsapp ?? 1) && user.phoneNumber)) {
+        const whatsappResult = await sendConfigWhatsApp(user, undefined, undefined, personalizedFullMessage);
+        userResult.whatsappSent = whatsappResult;
+        if (whatsappResult.success) whatsappSentCount++;
       } else {
-        const reason = !shouldSendWhatsApp ? 'Not time or limit reached' : !user.phoneNumber ? 'No phone number' : 'Limit reached';
-        userResult.whatsappSent = { success: false, skipped: true, reason };
+        userResult.whatsappSent = {
+          success: false,
+          skipped: true,
+          reason: !user.phoneNumber ? 'No phone number' : 'Limit reached or disabled'
+        };
       }
 
-      results.push(userResult);
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+      return userResult;
+    };
+
+    // Process all users in batches of 5 to respect rate limits and prevent timeouts
+    const results = await processInBatches(allUsers, 5, processUser);
 
     // Update settings with new counts
     await db.update(settings).set({

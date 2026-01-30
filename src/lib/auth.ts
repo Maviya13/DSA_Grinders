@@ -1,11 +1,15 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/db/drizzle';
-import { users } from '@/db/schema';
+import { users, User } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { supabase } from './supabase';
 import jwt from 'jsonwebtoken';
 
-const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'fallback_secret_key';
+const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET;
+
+if (!ADMIN_SESSION_SECRET && process.env.NODE_ENV === 'production') {
+    throw new Error('ADMIN_SESSION_SECRET environment variable is required in production');
+}
 
 export async function getCurrentUser(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
@@ -18,7 +22,7 @@ export async function getCurrentUser(req: NextRequest) {
     try {
         // 1. Try manual admin token first
         try {
-            const decoded = jwt.verify(token, ADMIN_SESSION_SECRET) as any;
+            const decoded = jwt.verify(token, ADMIN_SESSION_SECRET!) as any;
             if (decoded && decoded.role === 'admin' && decoded.manual) {
                 return { id: 'manual_admin', name: 'Manual Admin', role: 'admin', isProfileIncomplete: false };
             }
@@ -37,20 +41,23 @@ export async function getCurrentUser(req: NextRequest) {
 
         if (!user) return null;
 
-        // Verify profile is complete for regular routes
-        const isProfileIncomplete =
-            !user.leetcodeUsername ||
-            user.leetcodeUsername.startsWith('pending_') ||
-            !user.github ||
-            user.github === 'pending' ||
-            !user.phoneNumber ||
-            !user.linkedin;
-
-        return { ...user, isProfileIncomplete };
+        return { ...user, isProfileIncomplete: isProfileIncomplete(user) };
     } catch (error) {
         console.error('Auth error:', error);
         return null;
     }
+}
+
+export function isProfileIncomplete(user: User | any): boolean {
+    if (!user) return true;
+    return (
+        !user.leetcodeUsername ||
+        user.leetcodeUsername.startsWith('pending_') ||
+        !user.github ||
+        user.github === 'pending' ||
+        !user.phoneNumber ||
+        !user.linkedin
+    );
 }
 
 export function requireAuth(handler: (req: NextRequest, user: any, context?: any) => Promise<Response>) {
