@@ -7,12 +7,14 @@ import Image from 'next/image'
 import { MorphingText } from '@/components/ui/morphing-text'
 import { Particles } from '@/components/ui/particles'
 import { Loader2, Github, Star } from 'lucide-react'
-import { StickyBanner } from '@/components/ui/sticky-banner'
+import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler'
 import Link from 'next/link'
+import { useTheme } from 'next-themes'
 
 export default function Home() {
   const { user, signInWithGoogle, isLoading } = useAuth()
   const router = useRouter()
+  const { resolvedTheme } = useTheme()
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -20,102 +22,103 @@ export default function Home() {
     }
   }, [user, isLoading, router])
 
-  // Show loading while checking auth or if user is logged in (redirecting)
   if (isLoading || user) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     )
   }
 
+  const particleColor = resolvedTheme === 'dark' ? '#ffffff' : '#000000'
+
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-white flex flex-col">
-      <StickyBanner className="bg-blue-50 text-blue-900 shrink-0 shadow-sm border-b border-blue-200 py-1.5">
-        <div className="flex items-center justify-center gap-4 w-full">
-          <Github className="w-5 h-5 text-blue-600 hidden xs:block" />
-          <p className="text-sm md:text-base font-semibold tracking-tight">
+    <div className="h-screen w-screen overflow-hidden bg-background flex flex-col">
+      {/* Particle Background */}
+      <Particles
+        className="fixed inset-0 pointer-events-none"
+        quantity={60}
+        color={particleColor}
+        size={0.4}
+        staticity={70}
+        ease={70}
+      />
+
+      {/* Sticky Banner - Always Blue */}
+      <div className="bg-blue-600 text-white shrink-0 py-2 relative z-50">
+        <div className="flex items-center justify-center gap-4 w-full px-4">
+          <Github className="w-5 h-5 text-blue-100 hidden sm:block" />
+          <p className="text-sm font-semibold tracking-tight">
             Help us grow! <span className="hidden sm:inline">Star our repo on GitHub</span>
           </p>
           <a
             href="https://github.com/piyushdhoka/DSA_Grinders"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-1.5 py-1.5 px-4 bg-blue-600 text-white hover:bg-blue-700 rounded-full transition-all font-bold text-xs md:text-sm shadow-md active:scale-95"
+            className="flex items-center gap-1.5 py-1 px-3 bg-white text-blue-600 hover:bg-blue-50 rounded-full transition-colors font-bold text-xs active:scale-95"
           >
-            <Star className="w-3.5 h-3.5 fill-white group-hover:scale-110 transition-transform" />
+            <Star className="w-3 h-3 fill-current" />
             <span>Star</span>
           </a>
         </div>
-      </StickyBanner>
+      </div>
 
-      <div className="relative flex-1 overflow-hidden">
-        {/* Particle Background */}
-        <Particles
-          className="fixed inset-0 z-0 pointer-events-none"
-          quantity={300}
-          color="#4285F4"
-          size={1.2}
-          staticity={40}
-          ease={40}
-        />
-
-        {/* Navigation */}
-        <nav className="relative z-10 flex items-center justify-between px-4 md:px-10 py-5">
+      {/* Navigation */}
+      <nav className="shrink-0 z-50 bg-background border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 md:px-10 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="relative w-8 h-8 md:w-10 md:h-10">
               <Image src="/logo.png" alt="DSA Grinders" width={40} height={40} className="object-contain" priority />
             </div>
-            <span className="text-base md:text-lg font-medium text-gray-900">DSA Grinders</span>
+            <span className="text-base md:text-lg font-semibold text-foreground">DSA Grinders</span>
           </div>
-        </nav>
+          <AnimatedThemeToggler />
+        </div>
+      </nav>
 
-        {/* Hero - Centered */}
-        <main className="relative z-10 flex flex-col items-center justify-center h-[calc(100vh-88px)] px-4 md:px-6 -mt-8 md:-mt-16">
-          <div className="max-w-3xl mx-auto text-center">
-
-            {/* Logo */}
-            <div className="relative w-24 h-24 md:w-36 md:h-36 mx-auto mb-5">
-              <Image src="/logo.png" alt="DSA Grinders" width={144} height={144} className="object-contain" priority />
-            </div>
-
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-white border border-gray-200 rounded-full shadow-sm mb-6 md:mb-8">
-              <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#34A853] rounded-full animate-pulse" />
-              <span className="text-xs md:text-sm text-gray-600">Synced with LeetCode</span>
-            </div>
-
-            {/* Static Headline - HIERARCHY principle */}
-            <h1 className="text-3xl md:text-headline px-2">
-              Track progress,
-            </h1>
-
-            {/* Morphing Text */}
-            <MorphingText
-              texts={["together", "daily", "smarter", "faster"]}
-              className="h-12 md:h-20 text-gray-400 font-normal text-2xl md:text-4xl"
-            />
-
-            {/* Subheadline */}
-            <p className="text-base md:text-lg text-gray-600 max-w-lg mx-auto mt-6 md:mt-8 mb-8 md:mb-10 px-4">
-              A simple way to stay consistent with your DSA practice.
-              Connect your LeetCode, compete with friends.
-            </p>
-
-            {/* CTA - EMPHASIS with Google Blue */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/login"
-                className="w-full sm:w-auto px-8 py-3.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-base font-medium rounded-full transition-colors flex items-center justify-center min-h-[48px]"
-              >
-                Get started
-              </Link>
-              <span className="text-xs md:text-sm text-gray-500">Free forever</span>
-            </div>
-
+      {/* Hero - Centered with proper flex layout */}
+      <main className="flex-1 flex items-center justify-center px-4 relative z-10">
+        <div className="text-center">
+          {/* Logo */}
+          <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-3">
+            <Image src="/logo.png" alt="DSA Grinders" width={80} height={80} className="object-contain" priority />
           </div>
-        </main>
-      </div>
+
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted border border-border rounded-full mb-4">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs text-muted-foreground">Synced with LeetCode</span>
+          </div>
+
+          {/* Static Headline */}
+          <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-0">
+            Track progress,
+          </h1>
+
+          {/* Morphing Text - has built-in h-16 md:h-24 */}
+          <MorphingText
+            texts={["together", "daily", "smarter", "faster"]}
+            className="text-muted-foreground font-normal! text-2xl! md:text-4xl! h-12! md:h-16!"
+          />
+
+          {/* Subheadline */}
+          <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto mt-2 mb-5">
+            A simple way to stay consistent with your DSA practice.
+            Connect your LeetCode, compete with friends.
+          </p>
+
+          {/* CTA Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/login"
+              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold rounded-full transition-colors"
+            >
+              Get started
+            </Link>
+            <span className="text-xs text-muted-foreground">Free forever</span>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

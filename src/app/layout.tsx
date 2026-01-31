@@ -3,6 +3,7 @@ import "./globals.css";
 import ErrorReporter from "@/components/ErrorReporter";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/AuthContext";
+import { ThemeProvider } from "@/components/theme-provider";
 import Script from "next/script";
 import SplashScreen from "@/components/SplashScreen";
 import OnboardingModal from "@/components/OnboardingModal";
@@ -81,14 +82,21 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="DSA Grinders" />
       </head>
-      <body className="antialiased bg-white text-gray-900 min-h-screen font-sans touch-manipulation">
-        <SplashScreen />
-        <ErrorReporter />
-        <AuthProvider>
-          {children}
-          <OnboardingModal />
-        </AuthProvider>
-        <Toaster />
+      <body className="antialiased bg-background text-foreground min-h-screen font-sans touch-manipulation">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SplashScreen />
+          <ErrorReporter />
+          <AuthProvider>
+            {children}
+            <OnboardingModal />
+          </AuthProvider>
+          <Toaster />
+        </ThemeProvider>
 
         {/* Service Worker Registration */}
         <Script id="sw-register" strategy="afterInteractive">

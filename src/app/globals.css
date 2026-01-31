@@ -45,69 +45,100 @@
 
 :root {
   --radius: 0.5rem;
-  
+
   /* Google News Official Color Palette */
   --background: #ffffff;
-  --foreground: #202124; /* Black */
-  
+  --foreground: #202124;
+  /* Black */
+
   --card: #ffffff;
   --card-foreground: #202124;
-  
+
   --popover: #ffffff;
   --popover-foreground: #202124;
-  
+
   /* Primary: Google News Blue */
-  --primary: #174EA6; /* Dark Blue */
-  --primary-hover: #4285F4; /* Medium Blue for hover */
-  --primary-light: #D2E3FC; /* Light Blue */
+  --primary: #174EA6;
+  /* Dark Blue */
+  --primary-hover: #4285F4;
+  /* Medium Blue for hover */
+  --primary-light: #D2E3FC;
+  /* Light Blue */
   --primary-foreground: #ffffff;
-  
+
   /* Secondary: Google News Colors */
-  --secondary: #F1F3F4; /* Light Grey */
+  --secondary: #F1F3F4;
+  /* Light Grey */
   --secondary-foreground: #174EA6;
-  
+
   /* Status Colors (Google News Palette) */
-  --success: #0D652D; /* Green */
-  --success-medium: #34A853; /* Medium Green */
-  --success-light: #CEEAD6; /* Light Green */
-  
-  --warning: #E37400; /* Orange */
-  --warning-light: #FBBC04; /* Yellow */
-  --warning-lightest: #FEEFC3; /* Light Yellow */
-  
-  --danger: #A50E0E; /* Red */
-  --danger-medium: #EA4335; /* Medium Red */
-  --danger-light: #FAD2CF; /* Light Red */
-  
+  --success: #0D652D;
+  /* Green */
+  --success-medium: #34A853;
+  /* Medium Green */
+  --success-light: #CEEAD6;
+  /* Light Green */
+
+  --warning: #E37400;
+  /* Orange */
+  --warning-light: #FBBC04;
+  /* Yellow */
+  --warning-lightest: #FEEFC3;
+  /* Light Yellow */
+
+  --danger: #A50E0E;
+  /* Red */
+  --danger-medium: #EA4335;
+  /* Medium Red */
+  --danger-light: #FAD2CF;
+  /* Light Red */
+
   /* Muted / Greys */
-  --muted: #F1F3F4; /* Light Grey */
-  --muted-foreground: #9AA0A6; /* Grey */
-  
-  --accent: #D2E3FC; /* Light Blue */
+  --muted: #F1F3F4;
+  /* Light Grey */
+  --muted-foreground: #9AA0A6;
+  /* Grey */
+
+  --accent: #D2E3FC;
+  /* Light Blue */
   --accent-foreground: #174EA6;
-  
-  --destructive: #A50E0E; /* Red from palette */
+
+  --destructive: #A50E0E;
+  /* Red from palette */
   --destructive-foreground: #ffffff;
-  
-  --border: #9AA0A6; /* Grey */
+
+  --border: #9AA0A6;
+  /* Grey */
   --input: #F1F3F4;
-  --ring: #4285F4; /* Medium Blue */
-  
+  --ring: #4285F4;
+  /* Medium Blue */
+
   /* Chart colors from Google News */
-  --chart-1: #4285F4; /* Medium Blue */
-  --chart-2: #EA4335; /* Medium Red */
-  --chart-3: #FBBC04; /* Yellow */
-  --chart-4: #34A853; /* Medium Green */
-  --chart-5: #9AA0A6; /* Grey */
-  
+  --chart-1: #4285F4;
+  /* Medium Blue */
+  --chart-2: #EA4335;
+  /* Medium Red */
+  --chart-3: #FBBC04;
+  /* Yellow */
+  --chart-4: #34A853;
+  /* Medium Green */
+  --chart-5: #9AA0A6;
+  /* Grey */
+
   /* Difficulty Colors (LeetCode style with Google palette) */
-  --easy: #0D652D; /* Dark Green */
-  --easy-bg: #CEEAD6; /* Light Green */
-  --medium: #E37400; /* Orange */
-  --medium-bg: #FEEFC3; /* Light Yellow */
-  --hard: #A50E0E; /* Dark Red */
-  --hard-bg: #FAD2CF; /* Light Red */
-  
+  --easy: #0D652D;
+  /* Dark Green */
+  --easy-bg: #CEEAD6;
+  /* Light Green */
+  --medium: #E37400;
+  /* Orange */
+  --medium-bg: #FEEFC3;
+  /* Light Yellow */
+  --hard: #A50E0E;
+  /* Dark Red */
+  --hard-bg: #FAD2CF;
+  /* Light Red */
+
   --sidebar: #ffffff;
   --sidebar-foreground: #202124;
   --sidebar-primary: #174EA6;
@@ -119,32 +150,33 @@
 }
 
 .dark {
-  /* Minimal dark mode support */
-  --background: #202124;
-  --foreground: #e8eaed;
-  --card: #303134; 
-  --card-foreground: #e8eaed;
-  --popover: #303134;
-  --popover-foreground: #e8eaed;
-  --primary: #8ab4f8;
-  --primary-foreground: #202124;
-  --secondary: #3c4043;
-  --secondary-foreground: #8ab4f8;
-  --muted: #3c4043;
-  --muted-foreground: #9aa0a6;
-  --accent: #3c4043;
-  --accent-foreground: #e8eaed;
-  --destructive: #f28b82;
-  --destructive-foreground: #202124;
-  --border: #5f6368;
-  --input: #5f6368;
-  --ring: #8ab4f8;
+  /* Pitch black dark mode */
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #0a0a0a;
+  --card-foreground: #ffffff;
+  --popover: #0a0a0a;
+  --popover-foreground: #ffffff;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #ffffff;
+  --muted: #171717;
+  --muted-foreground: #a1a1a1;
+  --accent: #1a1a1a;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #262626;
+  --input: #262626;
+  --ring: #3b82f6;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -169,8 +201,10 @@ html {
 
 /* Better touch experience */
 body {
-  overscroll-behavior-y: none; /* Prevent pull-to-refresh in browsers */
-  touch-action: pan-x pan-y; /* Better touch interactions */
+  overscroll-behavior-y: none;
+  /* Prevent pull-to-refresh in browsers */
+  touch-action: pan-x pan-y;
+  /* Better touch interactions */
 }
 
 /* Safe area insets for iPhone notches */
@@ -179,7 +213,7 @@ body {
     padding-left: max(0px, env(safe-area-inset-left));
     padding-right: max(0px, env(safe-area-inset-right));
   }
-  
+
   /* Adjust top navigation for notch */
   nav {
     padding-top: max(1.25rem, env(safe-area-inset-top));
@@ -187,14 +221,15 @@ body {
 }
 
 /* Make buttons feel more native */
-button, a {
+button,
+a {
   -webkit-user-select: none;
   user-select: none;
   cursor: pointer;
 }
 
 /* Active state for better touch feedback */
-button:active, 
+button:active,
 a:active,
 [role="button"]:active {
   opacity: 0.7;
@@ -211,7 +246,11 @@ a:active,
 }
 
 /* Smooth transitions for all interactive elements */
-button, a, input, textarea, select {
+button,
+a,
+input,
+textarea,
+select {
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -221,7 +260,7 @@ button, a, input, textarea, select {
     width: 0;
     background: transparent;
   }
-  
+
   * {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -241,15 +280,15 @@ button, a, input, textarea, select {
 }
 
 /* Native-like focus states */
-input:focus, 
-textarea:focus, 
+input:focus,
+textarea:focus,
 select:focus {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 /* Better touch targets (minimum 44x44px) */
-button, 
+button,
 a,
 input[type="button"],
 input[type="submit"] {
@@ -259,7 +298,10 @@ input[type="submit"] {
 
 /* Prevent zoom on input focus (iOS) */
 @media screen and (max-width: 768px) {
-  input, textarea, select {
+
+  input,
+  textarea,
+  select {
     font-size: 16px !important;
   }
 }
@@ -269,31 +311,30 @@ input[type="submit"] {
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(90deg,
+      #f0f0f0 0%,
+      #f8f8f8 50%,
+      #f0f0f0 100%);
   background-size: 1000px 100%;
   animation: shimmer 2s infinite;
 }
 
 /* Native-like card elevation */
 .card-elevated {
-  box-shadow: 
+  box-shadow:
     0 1px 2px 0 rgb(60 64 67 / 30%),
     0 1px 3px 1px rgb(60 64 67 / 15%);
 }
 
 .card-elevated-hover:hover {
-  box-shadow: 
+  box-shadow:
     0 1px 3px 0 rgb(60 64 67 / 30%),
     0 4px 8px 3px rgb(60 64 67 / 15%);
 }
@@ -304,6 +345,7 @@ input[type="submit"] {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -321,9 +363,17 @@ input[type="submit"] {
 
 /* Haptic feedback class (visual only, actual haptic needs JS) */
 @keyframes tap-feedback {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(0.95);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .tap-feedback:active {
@@ -449,20 +499,24 @@ input[type="submit"] {
 }
 
 /* RHYTHM - Consistent spacing on 8px grid */
-.space-rhythm-tight > * + * {
-  margin-top: 0.5rem; /* 8px */
+.space-rhythm-tight>*+* {
+  margin-top: 0.5rem;
+  /* 8px */
 }
 
-.space-rhythm > * + * {
-  margin-top: 1rem; /* 16px */
+.space-rhythm>*+* {
+  margin-top: 1rem;
+  /* 16px */
 }
 
-.space-rhythm-relaxed > * + * {
-  margin-top: 1.5rem; /* 24px */
+.space-rhythm-relaxed>*+* {
+  margin-top: 1.5rem;
+  /* 24px */
 }
 
-.space-rhythm-loose > * + * {
-  margin-top: 2rem; /* 32px */
+.space-rhythm-loose>*+* {
+  margin-top: 2rem;
+  /* 32px */
 }
 
 /* BALANCE - Card elevation system */
@@ -472,21 +526,21 @@ input[type="submit"] {
 }
 
 .card-raised {
-  box-shadow: 
+  box-shadow:
     0 1px 2px 0 rgba(60, 64, 67, 0.3),
     0 1px 3px 1px rgba(60, 64, 67, 0.15);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .card-floating {
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(60, 64, 67, 0.3),
     0 2px 4px -1px rgba(60, 64, 67, 0.15);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .card-floating:hover {
-  box-shadow: 
+  box-shadow:
     0 10px 15px -3px rgba(60, 64, 67, 0.3),
     0 4px 6px -2px rgba(60, 64, 67, 0.15);
   transform: translateY(-2px);
@@ -558,4 +612,10 @@ input[type="submit"] {
 .interactive-primary:active {
   transform: translateY(0);
   box-shadow: 0 1px 4px rgba(23, 78, 166, 0.3);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }

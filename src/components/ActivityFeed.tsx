@@ -35,26 +35,26 @@ export default function ActivityFeed({ entries, activities: providedActivities }
 
     if (activities.length === 0) {
         return (
-            <div className="bg-gray-50/50 rounded-3xl border border-gray-100 p-8 text-center">
-                <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Terminal className="h-5 w-5 text-gray-400" />
+            <div className="bg-muted/50 rounded-3xl border border-border p-8 text-center">
+                <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Terminal className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <h3 className="text-gray-900 font-bold mb-1">Silence in the arena...</h3>
-                <p className="text-gray-500 text-sm">No recent solutions detected. Is everyone sleeping?</p>
+                <h3 className="text-foreground font-bold mb-1">Silence in the arena...</h3>
+                <p className="text-muted-foreground text-sm">No recent solutions detected. Is everyone sleeping?</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+        <div className="bg-card rounded-3xl border border-border p-6">
             <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <Terminal className="w-4 h-4 text-emerald-500" />
                     Activity
                 </h3>
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 rounded-full">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full">
                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight">Live</span>
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tight">Live</span>
                 </div>
             </div>
 
@@ -65,41 +65,41 @@ export default function ActivityFeed({ entries, activities: providedActivities }
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="p-4 rounded-2xl bg-gray-50/50 border border-gray-100 hover:bg-white hover:shadow-md transition-all group"
+                        className="p-4 rounded-2xl bg-muted/50 border border-border hover:bg-card transition-all group"
                     >
                         <div className="flex items-start gap-4">
                             <div className="relative">
-                                <div className="h-10 w-10 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg overflow-hidden">
+                                <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold overflow-hidden">
                                     {activity.avatar ? (
                                         <img src={activity.avatar} alt="" className="h-full w-full object-cover" />
                                     ) : (
                                         activity.userName.charAt(0)
                                     )}
                                 </div>
-                                <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
+                                <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-emerald-500 rounded-full border-2 border-card flex items-center justify-center">
                                     <div className="h-1.5 w-1.5 bg-white rounded-full animate-pulse" />
                                 </div>
                             </div>
 
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
-                                    <h4 className="text-sm font-bold text-gray-900 truncate">
+                                    <h4 className="text-sm font-bold text-foreground truncate">
                                         {activity.userName.split(' ')[0]}
                                     </h4>
-                                    <div className="flex items-center gap-1 text-[10px] font-medium text-gray-400">
+                                    <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                                         <Clock className="w-3 h-3" />
                                         {getTimeAgo(activity.timestamp)}
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <p className="text-xs text-gray-500 truncate pr-2">
-                                        Solved <span className="font-bold text-gray-900">"{activity.title}"</span>
+                                    <p className="text-xs text-muted-foreground truncate pr-2">
+                                        Solved <span className="font-bold text-foreground">"{activity.title}"</span>
                                     </p>
                                     <a
                                         href={`https://leetcode.com/problems/${activity.titleSlug}/`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-gray-400 hover:text-blue-500 transition-colors"
+                                        className="text-muted-foreground hover:text-primary transition-colors"
                                     >
                                         <ExternalLink className="w-3 h-3" />
                                     </a>

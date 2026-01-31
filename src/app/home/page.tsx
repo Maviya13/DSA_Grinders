@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, Trophy, Target, Crown, LogOut, Github, Linkedin, Users, Plus, Hash, Copy, Settings, ChevronRight, Flame, Medal, Link as LinkIcon, Share2 } from "lucide-react";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
@@ -316,7 +317,7 @@ export default function HomePage() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="min-h-screen bg-background flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
         );
@@ -329,9 +330,9 @@ export default function HomePage() {
     const myRank = currentUserEntry?.rank || '-';
 
     return (
-        <div className="min-h-screen bg-white text-gray-800 font-sans">
+        <div className="min-h-screen bg-background text-foreground font-sans">
             {/* Header - Google Style Navbar */}
-            <header className="fixed top-0 inset-x-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-200">
+            <header className="fixed top-0 inset-x-0 bg-background/90 backdrop-blur-md z-50 border-b border-border">
                 <div className="max-w-[1200px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2 md:gap-3">
                         <Image src="/logo.png" alt="Logo" width={32} height={32} className="object-contain md:w-10 md:h-10" priority />
@@ -346,7 +347,7 @@ export default function HomePage() {
                             size="sm"
                             onClick={refreshStats}
                             disabled={isRefreshing || (lastRefresh !== null && Date.now() - lastRefresh.getTime() < 60000)}
-                            className={`text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-medium rounded-full px-2 md:px-4 ${isRefreshing || (lastRefresh !== null && Date.now() - lastRefresh.getTime() < 60000) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600 font-medium rounded-full px-2 md:px-4 ${isRefreshing || (lastRefresh !== null && Date.now() - lastRefresh.getTime() < 60000) ? 'opacity-50 cursor-not-allowed' : ''}`}
                             title={lastRefresh && Date.now() - lastRefresh.getTime() < 60000 ? "Please wait before syncing again" : "Sync Leaderboard"}
                         >
                             <RefreshCw className={`h-4 w-4 md:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -356,17 +357,18 @@ export default function HomePage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => router.push('/profile')}
-                            className="text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-medium rounded-full px-2 md:px-4"
+                            className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600 font-medium rounded-full px-2 md:px-4"
                         >
                             <span className="hidden md:inline">Profile</span>
                             <Settings className="h-4 w-4 md:hidden" />
                         </Button>
-                        <div className="h-6 w-px bg-gray-200 mx-1"></div>
+                        <AnimatedThemeToggler className="h-8 w-8 md:h-9 md:w-9" />
+                        <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={logout}
-                            className="text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full h-8 w-8 md:h-9 md:w-9 p-0"
+                            className="text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-full h-8 w-8 md:h-9 md:w-9 p-0"
                             title="Logout"
                         >
                             <LogOut className="h-4 w-4" />
@@ -379,10 +381,10 @@ export default function HomePage() {
 
                 {/* Personal Dashboard Overview - GROWTH & ONBOARDING focus */}
                 <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                    <div className="bg-linear-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl shadow-blue-200 relative overflow-hidden">
-                        {/* Decorative Circles */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full -ml-24 -mb-24 blur-3xl" />
+                    <div className="bg-linear-to-br from-primary to-primary/80 rounded-[2.5rem] p-8 md:p-12 text-primary-foreground relative overflow-hidden">
+                        {/* Decorative Circles - removed blur for cleaner look */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32" />
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
 
                         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
                             <div className="flex items-center gap-6">
@@ -427,7 +429,7 @@ export default function HomePage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                     {/* Left Column: Leaderboard */}
-                    <div className="lg:col-span-8 bg-white rounded-3xl border border-gray-200 shadow-sm relative overflow-hidden">
+                    <div className="lg:col-span-8 bg-card rounded-3xl border border-border relative overflow-hidden">
 
 
                         {/* Group Scope Selector */}
@@ -435,14 +437,14 @@ export default function HomePage() {
                             <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="h-11 px-5 bg-white border-gray-100 shadow-sm hover:shadow-md hover:bg-gray-50 transition-all rounded-2xl gap-3 group">
+                                        <Button variant="outline" className="h-11 px-5 bg-card border-border hover:bg-muted transition-all rounded-2xl gap-3 group">
                                             <div className="flex flex-col items-start leading-tight">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-blue-500 transition-colors">Scope</span>
-                                                <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">
+                                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">Scope</span>
+                                                <span className="text-sm font-bold text-foreground truncate max-w-[120px]">
                                                     {activeGroup ? activeGroup.name : 'Global'}
                                                 </span>
                                             </div>
-                                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-56 p-2">
@@ -514,17 +516,17 @@ export default function HomePage() {
                             )}
                         </div>
 
-                        <div className="px-4 md:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-t border-gray-100 bg-gray-50/20 mt-2 gap-4">
+                        <div className="px-4 md:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-t border-border bg-muted/20 mt-2 gap-4">
                             <div className="flex items-center gap-5">
-                                <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap">
+                                <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] whitespace-nowrap">
                                     {activeGroup ? 'Group Arena' : 'Global Arena'}
                                 </h2>
-                                <div className="flex bg-gray-200/50 p-1 rounded-xl border border-gray-100">
+                                <div className="flex bg-muted p-1 rounded-xl border border-border">
                                     <button
                                         onClick={() => setLeaderboardType('daily')}
                                         className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${leaderboardType === 'daily'
-                                            ? 'bg-white text-blue-600 shadow-md transform scale-102 ring-1 ring-black/5'
-                                            : 'text-gray-400 hover:text-gray-600'
+                                            ? 'bg-card text-primary ring-1 ring-border'
+                                            : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                     >
                                         Daily
@@ -532,8 +534,8 @@ export default function HomePage() {
                                     <button
                                         onClick={() => setLeaderboardType('allTime')}
                                         className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${leaderboardType === 'allTime'
-                                            ? 'bg-white text-blue-600 shadow-md transform scale-102 ring-1 ring-black/5'
-                                            : 'text-gray-400 hover:text-gray-600'
+                                            ? 'bg-card text-primary ring-1 ring-border'
+                                            : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                     >
                                         All Time
@@ -541,7 +543,7 @@ export default function HomePage() {
                                 </div>
                             </div>
                             {lastRefresh && (
-                                <span className="text-xs font-medium text-gray-400 bg-white px-3 py-1 rounded-full border border-gray-200 self-start sm:self-auto">
+                                <span className="text-xs font-medium text-muted-foreground bg-card px-3 py-1 rounded-full border border-border self-start sm:self-auto">
                                     Updated {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             )}
@@ -598,29 +600,29 @@ export default function HomePage() {
                                 ))}
                             </div>
                         ) : leaderboard.length === 0 ? (
-                            <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+                            <div className="h-64 flex flex-col items-center justify-center text-muted-foreground">
                                 <p>No data available yet.</p>
                             </div>
                         ) : (
                             <>
                                 {/* Header Row - Hidden on small mobile */}
-                                <div className="px-4 md:px-8 py-4 bg-gray-50/20 border-b border-gray-100 flex items-center gap-4 md:gap-8">
+                                <div className="px-4 md:px-8 py-4 bg-muted/20 border-b border-border flex items-center gap-4 md:gap-8">
                                     <div className="w-8 md:w-12 flex justify-center shrink-0">
-                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rank</span>
+                                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Rank</span>
                                     </div>
                                     <div className="flex-1 flex items-center gap-4 min-w-0">
                                         <div className="w-12 md:w-14 shrink-0 opacity-0" />
-                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">User</span>
+                                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">User</span>
                                     </div>
                                     <div className="flex gap-4 md:gap-10 items-center shrink-0">
                                         <div className="hidden lg:flex justify-center w-16">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Streak</span>
+                                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Streak</span>
                                         </div>
                                         <div className="text-right w-16 md:w-24">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Score</span>
+                                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Score</span>
                                         </div>
                                         <div className="text-right w-16 md:w-24">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Today</span>
+                                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Today</span>
                                         </div>
                                     </div>
                                 </div>
